@@ -1,0 +1,3 @@
+function void something(void){
+	log(s:"Something...");
+}

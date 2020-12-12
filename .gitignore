@@ -1,0 +1,5 @@
+build/
+dist/
+CacoPacker.spec
+project.ini
+__pycache__/

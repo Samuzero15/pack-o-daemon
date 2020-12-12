@@ -1,0 +1,10 @@
+#library "TEST"
+#include "zcommon.acs"
+#include "test2.acs"
+#include "test3.acs"
+
+script 1 (void){
+	print(s:"Oh yeah");
+	something();
+	something2();
+}
