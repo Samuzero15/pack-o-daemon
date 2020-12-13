@@ -1,6 +1,7 @@
 
 import wx
 import os
+import sys
 import source.main_frame as frame
 import source.constants as const
 
@@ -14,12 +15,15 @@ def GreetUser():
     msg += "\nto build and play in matter of seconds."
     msg += "\n\nNote: If the antivirus says its a virus, it's a"
     msg += "\nfalse positive, add it to your exceptions."
-    dlg = wx.MessageDialog(None, msg, "First time?").ShowModal()
+    msg += "\n\nThis time " + const.EXENAME + " will not start."
+    msg += "\nRun it again once you're done with the project.ini file."
+    dlg = wx.MessageDialog(None, msg, "Welcome!").ShowModal()
     
 if __name__ == "__main__":
     app = wx.App()
     first_time = const.load_stuff()
     if first_time:
         GreetUser()
+        sys.exit()
     frm = frame.Main().Show(True);
     app.MainLoop()

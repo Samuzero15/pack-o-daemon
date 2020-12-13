@@ -28,7 +28,7 @@ def make_default_ini():
     # config.set(section, "# The mentioned files are writtable by giving it some template.")
     # config.set(section, "build_variable_files", "")
     config.set(section, "# -=(Package settings)=-")
-    config.set(section, "zip_name",      "project")
+    config.set(section, "zip_name",      "my_project")
     config.set(section, "zip_dir",       "dist\packed")
     config.set(section, "zip_tag",       "v0")
     config.set(section, "# -=(Play project settings)=-", None)
@@ -44,7 +44,7 @@ def make_default_ini():
     
     config['Source'] = {
         "relase"            : "v0",
-        "filename"          : "src",
+        "filename"          : "my_mod",
         "acscomp"           : "false",
         "sourcedir"         : "src",
         "distdir"           : "dist",
@@ -92,6 +92,7 @@ def str_is_int(stringy):
     return res
 
 VERSION = (1, 0, 0)
+EXENAME = "Pack-o-daemon"
 COMPILER_EXE = "acc.exe"
 TODAY = datetime.datetime.now().strftime('%d/%m/%Y')
 CONFIG = ConfigParser()
@@ -103,7 +104,7 @@ VARIABLE_FILES = ["Language.txt", "GAMEINFO.txt", "changelog.md", "buildinfo.txt
 SHOWCASE_FILE = ["showcase.txt"]
 
 def get_version():
-    return "Caco Packer - Ver. " + str(VERSION[0]) + "." + str(VERSION[1]) + "." + str(VERSION[2])
+    return  EXENAME + " - Ver. " + str(VERSION[0]) + "." + str(VERSION[1]) + "." + str(VERSION[2])
 
 def get_skip_filetypes():
     return ini_prop("build_skip_files", "")

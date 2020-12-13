@@ -30,7 +30,7 @@ class Main(wx.Frame):
             dlg = wx.MessageDialog(None, msg, "Missing Project Parts").ShowModal()
             sys.exit()
             
-        wx.Frame.__init__(self, None, title="Caco Packer", size=(300, 250))
+        wx.Frame.__init__(self, None, title=const.EXENAME, size=(300, 250))
         self.sb = self.CreateStatusBar()
         
         
