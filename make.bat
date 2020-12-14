@@ -8,7 +8,7 @@ echo Make sure you have python 3.8.5 or adobe.
 echo. 
 pause
 call "%~dp0scripts\activate"
-"pyinstaller" run.py --onefile -w --name CacoPacker -i "icon.ico" --add-data "source/*.*;source" --add-data "source/imgs/*.*;source/imgs"
+"pyinstaller" run.py --onefile -w --name pack-o-daemon -i "icon.ico" --add-data "source/*.*;source" --add-data "source/imgs/*.*;source/imgs"
 echo. 
 echo =============================================
 echo        CACO PACKER BUILD Completed
