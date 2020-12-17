@@ -161,7 +161,7 @@ class PlayProject(threading.Thread):
         fullcmd     = ["zandronum.exe", "-iwad", "doom2.wad" , "-file", std_path]
         subprocess.call(fullcmd+ filelist + ['+map', map_test])
         """
-        p = subprocess.Popen(fullcmd, stdout=subprocess.PIPE)
+        p = subprocess.Popen(fullcmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
         out, err = p.communicate()
             
         os.chdir(self.ui.rootdir)

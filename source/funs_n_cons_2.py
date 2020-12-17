@@ -290,29 +290,29 @@ def acs_compile(builder, part):
             os.rmdir(tmp_dir)
             return -1
         else:
-            # If you have acs files, compile them like libraries.
+            # If you have acs files, compile them like libnraries.
             # Small suggestion, if you have an acs file which acts as a function container (through #include) rename the extention to something else, like .ach
             f_target = os.path.join(root, file)
             f_name = os.path.basename(f_target).split('.')[0]
             f_names = os.path.basename(f_target).split('.')[0] + '.' + os.path.basename(f_target).split('.')[1]
             
             compcmd     = [comp_path] + includes + [f_target] + [os.path.join(acs_dir, f_name + '.o')]
-            
-            subprocess.call(compcmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.call(compcmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
             current+=1;
             printProgress(builder.ui, current, len(files_to_compile), '> Compiled', 'acs files. (' + f_names + ')')
-            acs_err = os.path.join(root, 'acs.err')
-            
+            # acs_err = os.path.join(rootDir, 'acs.err')
+            acs_err = f_target.replace(f_names, 'acs.err')
             # We got an error in the acs script? Stop it, and show the error ASAP.
             if os.path.isfile(acs_err):
                 remove_files(files_copied)
                 os.rmdir(tmp_dir)
-                os.chdir(root);
+                acs_err_dir = get_file_dir(acs_err)
+                os.chdir(acs_err_dir);
                 # os.system('cls')
                 with open('acs.err', 'rt') as errorlog:
                     builder.ui.AddToLog(errorlog.read())
                     errorlog.close()
-                os.remove(os.path.join(root, 'acs.err'))
+                os.remove(os.path.join(acs_err_dir, 'acs.err'))
                 builder.ui.AddToLog("> Fix those errors and try again, compilation failed.")
                 return -1
             
@@ -320,7 +320,7 @@ def acs_compile(builder, part):
             if not os.path.isfile(os.path.join(acs_dir, f_name + '.o')):
                 remove_files(files_copied)
                 os.rmdir(tmp_dir)
-                os.chdir(root);
+                os.chdir(rootDir);
                 # os.system('cls')
                 if(os.path.isfile(acs_err)): os.remove(acs_err)
                 builder.ui.AddToLog("> The expected file was'nt created, compilation failed.")

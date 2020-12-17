@@ -40,7 +40,7 @@ If you change something from the project.ini file, and you have the executable r
 5. Now get the requirements installed with ```pip install -r requirements.txt```
 6. And you're ready to go, it depends on what you want to do.
 	> * To run it, do step 4, and then ```run.py```
-	> * To build it, use the make.bat file.
+	> * To build it, use the make.bat file in windows. Sadly I dont know how to install it on any linux distribution, or in MAC-OS derivated systems. (A bit of help on this part plz)
 
 If you need an executable for your OS, build it with the bat, that should compile it to .tar.gz or to .exe
 You can use any text editor if you wish.
@@ -49,8 +49,8 @@ You can use any text editor if you wish.
 > No questions yet...
 
 #### Thanks to
-* **sirjuddington** for the slade's acs compiler source code
-* **Xaser** for the base code of his package builder for the eriguns doom mods.
+* **sirjuddington** For the slade's acs compiler source code
+* **Xaser** For the base code of his package builder for the eriguns doom mods.
 * **AdmiralKosnov** For changing the name. The last one sounded more of a fudge packer. 
 
 ### See the changelog in the changelog.md file

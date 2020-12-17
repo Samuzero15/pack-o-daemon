@@ -1,4 +1,5 @@
 echo off
+cls
 echo.
 echo =============================================
 echo      CACO PACKER BUILDER batch script

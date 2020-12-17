@@ -3,3 +3,4 @@ dist/
 *.spec
 project.ini
 __pycache__/
+doomproject/

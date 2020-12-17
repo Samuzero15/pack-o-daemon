@@ -50,7 +50,7 @@ def make_default_ini():
         "distdir"           : "dist",
         "notxt"             : "false"
     }
-    with open("project.ini","w") as configfile:
+    with open(PROJECT_FILEINI,"w") as configfile:
         config.write(configfile)
 
 # Defaults to the project section.
@@ -60,8 +60,8 @@ def ini_prop(what, default=None, section="Project"):
         return setting.split(',')
     elif str_is_int(setting):
         return int(setting)
-    elif str_is_bool(setting):
-        return str_is_bool(stringy)
+    elif str_is_bool(setting) is not None:
+        return str_is_bool(setting)
     else: return setting
 
 # Read all sections
@@ -74,10 +74,10 @@ def read_parts(rootDir=os.getcwd()):
 
 # The string is a boolean?
 def str_is_bool(stringy):
-    test = stringy.lower;
-    if(str(test).find("true") != -1 and len(test) == 4):
+    test = stringy.lower();
+    if(test in ["yes","y","1","true"]):
         return True
-    elif(str(test).find("false") != -1 and len(test) == 5):
+    elif(test in ["no","n","0","false"]):
         return False
     return None
 
@@ -91,7 +91,7 @@ def str_is_int(stringy):
         pass
     return res
 
-VERSION = (1, 0, 1)
+VERSION = (1, 1, 0)
 EXENAME = "Pack-o-daemon"
 COMPILER_EXE = "acc.exe"
 TODAY = datetime.datetime.now().strftime('%d/%m/%Y')
