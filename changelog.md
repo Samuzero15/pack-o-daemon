@@ -1,5 +1,8 @@
 # Packodaemon Changelog
 
+## v1.1.1 [ACS Compile patch]
+	* The console spam for the acs compilation has been removed.
+
 ## v1.1.0 [Critical fixes]
 	* Now the acs compilation and the running script for soruce ports should work correctly this time.
 	* Small fix on the ini reader part.

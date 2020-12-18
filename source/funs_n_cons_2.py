@@ -284,6 +284,12 @@ def acs_compile(builder, part):
     builder.ui.AddToLog("> Compiling ACS for {name}".format(name=partname));
     current = 0;
     
+    startupinfo = None
+    if os.name == 'nt':
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+    
     for file in files_to_compile:
         if builder.abort: 
             remove_files(files_copied)
@@ -297,7 +303,7 @@ def acs_compile(builder, part):
             f_names = os.path.basename(f_target).split('.')[0] + '.' + os.path.basename(f_target).split('.')[1]
             
             compcmd     = [comp_path] + includes + [f_target] + [os.path.join(acs_dir, f_name + '.o')]
-            subprocess.call(compcmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
+            subprocess.call(compcmd,stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, startupinfo=startupinfo)
             current+=1;
             printProgress(builder.ui, current, len(files_to_compile), '> Compiled', 'acs files. (' + f_names + ')')
             # acs_err = os.path.join(rootDir, 'acs.err')
