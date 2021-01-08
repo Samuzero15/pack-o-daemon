@@ -1,5 +1,11 @@
 # Packodaemon Changelog
 
+## v1.2.0 [ACS Error prompt and bugfixes]
+	* Fixed the packing script.
+	* The play settings can be saved temporaily in case of any quick changes.
+	* Now the zipping files can skip the extensions, splitting the space.
+	* On the ACS compilation, if an error occurs, a prompt will be shown, displaying the type of error found, with 2 buttons in it. You can Retry the compilation on that file, or just Abort the build.
+
 ## v1.1.1 [ACS Compile patch]
 	* The console spam for the acs compilation has been removed.
 

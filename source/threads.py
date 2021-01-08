@@ -71,14 +71,17 @@ class BuildProject(threading.Thread):
             return
         
         output = (0,[])
+        files_to_pack = []
         # Good, now start.
         for part in parts:
             output = part.BuildPart(self, versioned, noacs, current, total)
+            
             if not part.skip: current += 1
             if output[0] != 0 or self.abort:
                 wx.PostEvent(self.ui, BuildResultEvent(output[0]))
                 return
-        
+            files_to_pack.extend(output[1]);
+            
         # Files are built, now, we should pack them if flagged to do so.
         
         if packed:
@@ -99,11 +102,11 @@ class BuildProject(threading.Thread):
             destination = os.path.join(distDir, fileName)
             distzip = zipfile.ZipFile(destination, "w", zipfile.ZIP_DEFLATED)
             current = 1
-            for file in output[1]:
+            for file in files_to_pack:
                 if self.abort: distzip.close(); return None
                 os.chdir(file[0])
                 distzip.write(file[1])
-                utils.printProgress (self.ui, current, len(output[1]), '> Packed: ', 'files. (' + file[1] + ')')
+                utils.printProgress (self.ui, current, len(files_to_pack), '> Packed: ', 'files. (' + file[1] + ')')
                 current += 1
                 
             distzip.close()

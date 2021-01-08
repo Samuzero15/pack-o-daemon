@@ -171,6 +171,13 @@ class PlayDialog(wx.Dialog):
         
         msg = "The current play settings are saved in the project.ini file."
         dlg = wx.MessageDialog(self.parent, msg, "Settings saved!").ShowModal()
+       
+    def GetCurrentSets(self):
+        return [self.list_sourceports.GetSelection(), 
+        self.list_iwads.GetSelection(), 
+        self.txt_ctrl_map.GetValue(),  
+        self.txt_ctrl_params.GetValue(), 
+        self.project_pwads]
     
     def GetPWADList(self):
         # Retrives all pwads, with filename and directory separated.

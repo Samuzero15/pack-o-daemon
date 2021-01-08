@@ -24,6 +24,7 @@ class Main(wx.Frame):
         self.builder = None
         self.play_params = [-1,-1,"","",[], [], []]
         self.projectparts = const.read_parts(self.rootdir)
+        self.response = -1
         
         if(len(self.projectparts) == 0):
             msg = "There is no project parts in this project!"
@@ -238,6 +239,13 @@ class Main(wx.Frame):
         header = "The game closed \nHere it is the following output."
         self.lastlog = [header, event.data]
         dialog = rd.ResultDialog(self, header, event.data).ShowModal()
+    
+    def ACSErrorOutput(self, output):
+        self.response = -1
+        acs_err_dialog = rd.ACSErrorDialog(self,output)
+        acs_err_dialog.ShowModal()
+        # acs_err_dialog.Destroy()
+        
         
     
     def OnPlay(self, e):
@@ -274,7 +282,10 @@ class Main(wx.Frame):
                         self.play_params[4][index] = p.GetExpectedPWADS(versioned)
                 index += 1
                 
-        pd.PlayDialog(self, self.play_params).ShowModal()
+        dialog = pd.PlayDialog(self, self.play_params)
+        dialog.ShowModal()
+        self.play_params = dialog.GetCurrentSets()
+        # saves the temporary settings while you're on the program. (Not saved to the ini)
     
     def OnLog(self, e):
         rd.ResultDialog(self, self.lastlog[0], self.lastlog[1]).ShowModal()

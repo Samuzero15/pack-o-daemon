@@ -19,6 +19,12 @@ Literally just clicks away before playing your project.
 * For now, supported testing sourceports are Zandronum, GZDoom(?), and ZDaemon(?)
 * Also features a hard-coded function to overrite files with some extra data, but eeeh it's more of a WIP.
 
+#### Why this?
+* For the people who likes to work in their local directory using the file explorer.
+* Allows you to use extern programs directly. (Audacity, Photoshop, Notepad++, Sublime Text, you name it)
+* Smack some git repository in there to save your progress in your project.
+* You like Slade, but you're kind of alergic to the text editor.
+
 #### How to use it?
 1. Get the pack-o-daemon.exe, and place it on your root folder. (where the doom project resides)
 	> The directory structure should be somethin' like this:

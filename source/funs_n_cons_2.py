@@ -9,7 +9,6 @@ import subprocess
 import wx
 from configparser import ConfigParser
 import source.constants as const
-
 from glob import iglob
 from shutil import copyfile
 
@@ -58,8 +57,10 @@ def makepkg(builder, sourcePath, destPath, notxt=False, skipVariableTexts=False)
 # Return if this file should be ignored.
 def file_igonre(file):
     should_ignore = False;
+    # print(const.get_skip_filetypes());
     for ext in const.get_skip_filetypes():
-        if not (should_ignore): should_ignore = file.endswith(ext);
+        # print(ext.strip(" "))
+        if not (should_ignore): should_ignore = file.endswith(ext.strip(" "));
         else: break;
     return should_ignore;
     
@@ -291,46 +292,74 @@ def acs_compile(builder, part):
 
     
     for file in files_to_compile:
-        if builder.abort: 
+        outs = 0
+        while True:
+            
+            os.chdir(src_dir);
+            
+            # Wait until the ACS Error dialog gives us an answer
+            if outs == 1:
+                if builder.ui.response == 0: # Sthap
+                    builder.ui.AddToLog("> Aborting ACS Compilation.")
+                    builder.abort = True
+                    outs = -1
+                elif builder.ui.response == 1: # Keep going
+                    builder.ui.AddToLog("> Retrying ACS Compilation on the current file ({0}).".format(file))
+                    outs = 0
+                continue
+            
+            if builder.abort: 
+                remove_files(files_copied)
+                os.rmdir(tmp_dir)
+                return -1
+            else:
+                # If you have acs files, compile them like libnraries.
+                
+                f_target = os.path.join(root, file)
+                f_name = os.path.basename(f_target).split('.')[0]
+                f_names = os.path.basename(f_target).split('.')[0] + '.' + os.path.basename(f_target).split('.')[1]
+                
+                compcmd     = [comp_path] + includes + [f_target] + [os.path.join(acs_dir, f_name + '.o')]
+                subprocess.call(compcmd,stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, startupinfo=startupinfo)
+                # acs_err = os.path.join(rootDir, 'acs.err')
+                acs_err = f_target.replace(f_names, 'acs.err')
+                # We got an error in the acs script? Stop it, and show the error ASAP.
+                if os.path.isfile(acs_err):
+                    acs_err_dir = get_file_dir(acs_err)
+                    os.chdir(acs_err_dir);
+                    # os.system('cls')
+                    with open('acs.err', 'rt') as errorlog:
+                        error = errorlog.read()
+                        builder.ui.AddToLog(error)
+                        # builder.ui.ACSErrorOutput(error)
+                        wx.CallAfter(builder.ui.ACSErrorOutput, error + "\n\nDo you wish to RETRY or ABORT the ACS Compilation?")
+                        errorlog.close()
+                    os.remove(os.path.join(acs_err_dir, 'acs.err'))
+                    builder.ui.AddToLog("> The file contains some errors, compilation failed.")
+                    outs = 1
+                    continue
+
+                    # Actually instead of just bouncing you out, I prefer to just repeat the compilation of that file.
+                
+                # Also stop if the expected file was'nt created.
+                if not os.path.isfile(os.path.join(acs_dir, f_name + '.o')):
+                    os.chdir(rootDir);
+                    # os.system('cls')
+                    if(os.path.isfile(acs_err)): os.remove(acs_err)
+                    wx.CallAfter(builder.ui.ACSErrorOutput, "Something blew up :/")
+                    builder.ui.AddToLog("> The expected file was'nt created, compilation failed.")
+                    outs = 1
+                    continue
+                
+                break
+        if(outs == -1):
+            
             remove_files(files_copied)
             os.rmdir(tmp_dir)
             return -1
-        else:
-            # If you have acs files, compile them like libnraries.
-            # Small suggestion, if you have an acs file which acts as a function container (through #include) rename the extention to something else, like .ach
-            f_target = os.path.join(root, file)
-            f_name = os.path.basename(f_target).split('.')[0]
-            f_names = os.path.basename(f_target).split('.')[0] + '.' + os.path.basename(f_target).split('.')[1]
-            
-            compcmd     = [comp_path] + includes + [f_target] + [os.path.join(acs_dir, f_name + '.o')]
-            subprocess.call(compcmd,stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, startupinfo=startupinfo)
-            current+=1;
-            printProgress(builder.ui, current, len(files_to_compile), '> Compiled', 'acs files. (' + f_names + ')')
-            # acs_err = os.path.join(rootDir, 'acs.err')
-            acs_err = f_target.replace(f_names, 'acs.err')
-            # We got an error in the acs script? Stop it, and show the error ASAP.
-            if os.path.isfile(acs_err):
-                remove_files(files_copied)
-                os.rmdir(tmp_dir)
-                acs_err_dir = get_file_dir(acs_err)
-                os.chdir(acs_err_dir);
-                # os.system('cls')
-                with open('acs.err', 'rt') as errorlog:
-                    builder.ui.AddToLog(errorlog.read())
-                    errorlog.close()
-                os.remove(os.path.join(acs_err_dir, 'acs.err'))
-                builder.ui.AddToLog("> Fix those errors and try again, compilation failed.")
-                return -1
-            
-            # Also stop if the expected file was'nt created.
-            if not os.path.isfile(os.path.join(acs_dir, f_name + '.o')):
-                remove_files(files_copied)
-                os.rmdir(tmp_dir)
-                os.chdir(rootDir);
-                # os.system('cls')
-                if(os.path.isfile(acs_err)): os.remove(acs_err)
-                builder.ui.AddToLog("> The expected file was'nt created, compilation failed.")
-                return -1
+        current+=1;
+        printProgress(builder.ui, current, len(files_to_compile), '> Compiled', 'acs files. (' + f_names + ')')
+                
     
     # Job's done here, get back to the root directory and continue with the rest.
     remove_files(files_copied)

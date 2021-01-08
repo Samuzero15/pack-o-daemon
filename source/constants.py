@@ -91,7 +91,7 @@ def str_is_int(stringy):
         pass
     return res
 
-VERSION = (1, 1, 1)
+VERSION = (1, 2, 0)
 EXENAME = "Pack-o-daemon"
 COMPILER_EXE = "acc.exe"
 TODAY = datetime.datetime.now().strftime('%d/%m/%Y')
