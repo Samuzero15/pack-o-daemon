@@ -39,7 +39,6 @@ class Main(wx.Frame):
         self.flags = []
         self.skip_parts = []
         self.log = []
-        flags_labels = ["Skip ACS Comp.", "Make Version", "Pack Project"]
         skip_parts_labels = []
         for part_lbl in self.projectparts:
             skip_parts_labels.append("Skip " + part_lbl.name);
@@ -55,8 +54,10 @@ class Main(wx.Frame):
             checkSizer.Add(self.skip_parts[i], 0, wx.ALL, 2)
         
         checkSizer.Add(wx.StaticText(self.panel, label="Build Flags"), 0, wx.CENTER, 2)
-        for i in range(0, len(flags_labels)):
-            self.flags.append(wx.CheckBox(self.panel, label=flags_labels[i]))
+        for i in range(0, len(const.BUILD_FLAGS)):
+            tooltip = wx.ToolTip(const.BUILD_FLAGS[i][1])
+            self.flags.append(wx.CheckBox(self.panel, label=const.BUILD_FLAGS[i][0]))
+            self.flags[i].SetToolTip(tooltip);
             checkSizer.Add(self.flags[i], 0, wx.ALL, 2)
         
         
@@ -143,6 +144,10 @@ class Main(wx.Frame):
         noacs =     self.flags[0].GetValue();
         versioned = self.flags[1].GetValue();
         packed =    self.flags[2].GetValue();
+        play_it =   self.flags[3].GetValue();
+        
+        completed = sucess == thread.BUILD_SUCCESS
+        failure = sucess == thread.BUILD_CANCELED or sucess == thread.BUILD_ERROR
         
         nopart = []
         skip_a_part = False;
@@ -155,19 +160,22 @@ class Main(wx.Frame):
         result = ""
         title = ""
         if(not skip_a_part): 
-            if(sucess == thread.BUILD_SUCCESS): title = "Full build completed."
-            elif sucess == thread.BUILD_CANCELED or sucess == thread.BUILD_ERROR: 
+            if completed: title = "Full build completed."
+            elif failure: 
                 title = "Full build interrupted."
-        else:
-            if(sucess == thread.BUILD_SUCCESS): title = "Build completed with the following flags."
-            elif sucess == thread.BUILD_CANCELED or sucess == thread.BUILD_ERROR: 
-                title = "Build interrupted with the following flags."
+        else: 
             for part in self.projectparts:
                 if part.skip:
                     title += "\n -) " + part.name + " part skipped."
-            if(noacs):  title += "\n -) ACS compilation skipped."
-        
-        if(versioned):  title += "\n -) Setted version: " + const.ini_prop('zip_tag', 'v0');
+                    
+        if(noacs or versioned or packed or play_it):
+            if(completed): 
+                title = "Build completed with the following flags."
+            elif failure: 
+                title = "Build interrupted with the following flags."
+            
+        if(noacs):  title += "\n -) ACS compilation skipped."
+        if(versioned):  title += "\n -) Tagged to the respective versions.";
         if(packed):
             zipfilename = ""
             zip_name = const.ini_prop('zip_name', 'project')
@@ -178,6 +186,7 @@ class Main(wx.Frame):
                 zipfilename = zip_name + "_DEV.zip";
             title += "\n -) Packed-up in file: " + zipfilename
         if(sucess == thread.BUILD_SKIPPED): title = "Build Interrupted. \nAll the project parts are skipped, unmark the skip flags and try again."
+        if(play_it): title += "\n -) The project will run once you close this window."
         
         title += "\nRead the log for more details."
         
@@ -232,6 +241,9 @@ class Main(wx.Frame):
         dialog = rd.ResultDialog(self, result[0], result[1]).ShowModal()
         self.lastlog = [result[0], result[1]]
         self.builder = None
+        if (self.flags[3].GetValue()):
+            self.PlayNow(event)
+        
 
     def OnPlayResult(self, event):
         self.btn_log.Enable()
@@ -245,43 +257,14 @@ class Main(wx.Frame):
         acs_err_dialog = rd.ACSErrorDialog(self,output)
         acs_err_dialog.ShowModal()
         # acs_err_dialog.Destroy()
-        
-        
+    
+    
+    def PlayNow(self, e):
+        dialog = pd.PlayDialog(self, self.play_params)
+        dialog.OnPlay(e)
+        self.play_params = dialog.GetCurrentSets()
     
     def OnPlay(self, e):
-        versioned = self.flags[1].GetValue()
-        # Read the INI file, and get the required pwads.
-        pwads_before_ini = const.ini_prop('play_pwads_before')
-        pwads_before = []
-        for path in pwads_before_ini:
-            filepath = utils.relativePath(path)
-            if os.path.isfile(filepath):
-                pwads_before.append(filepath)
-        
-        pwads_after_ini = const.ini_prop('play_pwads_after')
-        pwads_after = []
-        for path in pwads_after_ini:
-            filepath = utils.relativePath(path)
-            if os.path.isfile(filepath):
-                pwads_after.append(filepath)
-            
-        if len(self.play_params[4]) == 0:
-            # If this is the first time on the play button. Load the INI PWADS and the project pwads
-            for pwad in pwads_before:
-                self.play_params[4].append([utils.get_file_name(pwad),utils.get_file_dir(pwad)])
-            for p in self.projectparts:
-                self.play_params[4].append(p.GetExpectedPWADS(versioned))
-            for pwad in pwads_after:
-                self.play_params[4].append([utils.get_file_name(pwad),utils.get_file_dir(pwad)])
-        else:
-            # Else, update the project pwads. Depending on the versioned mark.
-            index = 0
-            for pwadlist in self.play_params[4]:
-                for p in self.projectparts:
-                    if pwadlist[0] == p.GetExpectedPWADS(not versioned)[0]:
-                        self.play_params[4][index] = p.GetExpectedPWADS(versioned)
-                index += 1
-                
         dialog = pd.PlayDialog(self, self.play_params)
         dialog.ShowModal()
         self.play_params = dialog.GetCurrentSets()

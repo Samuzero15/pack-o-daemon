@@ -87,6 +87,7 @@ class BuildProject(threading.Thread):
         if packed:
             config = ConfigParser()
             config.read("project.ini")
+            os.chdir(rootdir)
             
             distDir  = const.ini_prop('zip_dir',  'dist\packed');
             fileName = const.ini_prop('zip_name', 'project');
@@ -95,7 +96,7 @@ class BuildProject(threading.Thread):
                 os.mkdir(distDir)
                 self.ui.AddToLog(distDir + " directory created to allocate the packed projects.")
                     
-            if versioned: fileName += "_" + const.ini_prop('tag_relase','v0') + '.zip'
+            if versioned: fileName += "_" + const.ini_prop('zip_tag','v0') + '.zip'
             else        : fileName += "_" + "DEV" + '.zip'
             
             

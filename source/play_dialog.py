@@ -16,7 +16,7 @@ class PlayDialog(wx.Dialog):
     def __init__(self, parent, play_params=[-1,-1,"","",[]]):
         wx.Dialog.__init__(self, parent, title="Play Project", size=(300, 200))
         self.parent = parent
-        self.project_pwads = play_params[4]
+        self.project_pwads = self.SetUpPwads(parent, play_params[4], parent.flags[1].GetValue())
         pwad_choices = [
         "doom2.wad",
         "doom.wad",
@@ -100,6 +100,40 @@ class PlayDialog(wx.Dialog):
         self.CentreOnParent()
         self.LoadDefaultValues(play_params)
         self.UpdatePWADButtons()
+        
+    def SetUpPwads(self, parent, pwad_list, versioned=False):
+        # Read the INI file, and get the required pwads.
+        pwads_before_ini = const.ini_prop('play_pwads_before')
+        pwads_before = []
+        for path in pwads_before_ini:
+            filepath = utils.relativePath(path)
+            if os.path.isfile(filepath):
+                pwads_before.append(filepath)
+        
+        pwads_after_ini = const.ini_prop('play_pwads_after')
+        pwads_after = []
+        for path in pwads_after_ini:
+            filepath = utils.relativePath(path)
+            if os.path.isfile(filepath):
+                pwads_after.append(filepath)
+            
+        if len(pwad_list) == 0:
+            # If this is the first time on the play button. Load the INI PWADS and the project pwads
+            for pwad in pwads_before:
+                pwad_list.append([utils.get_file_name(pwad),utils.get_file_dir(pwad)])
+            for p in parent.projectparts:
+                pwad_list.append(p.GetExpectedPWADS(versioned))
+            for pwad in pwads_after:
+                pwad_list.append([utils.get_file_name(pwad),utils.get_file_dir(pwad)])
+        else:
+            # Else, update the project pwads. Depending on the versioned mark.
+            index = 0
+            for pwadlist in pwad_list:
+                for p in parent.projectparts:
+                    if pwadlist[0] == p.GetExpectedPWADS(not versioned)[0]:
+                        pwad_list[index] = p.GetExpectedPWADS(versioned)
+                index += 1
+        return pwad_list
     
     def LoadDefaultValues(self, play_params):
         # Load the selected sourceport.

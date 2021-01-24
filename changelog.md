@@ -1,5 +1,12 @@
 # Packodaemon Changelog
 
+## v1.3.0 [ACS Comp library parse + a pair of new flags]
+	* #Include and #Import files can be updated now, letting you to modify and press retry after the ACS error.
+	* Now the packing script can put the proper tag to the zip.
+	* A new project config variable has been added, build_dir, where you can specify the directory to work on.
+	* A new flag has been added, build-n-play, which it lets you build the project and play it on the last settings.
+	* Some other misc. Fixes.
+	
 ## v1.2.0 [ACS Error prompt and bugfixes]
 	* Fixed the packing script.
 	* The play settings can be saved temporaily in case of any quick changes.

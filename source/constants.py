@@ -25,6 +25,7 @@ def make_default_ini():
     config.set(section, "# -=(Build Settings)=-")
     config.set(section, "# The mentioned files (or file extensions) will be skipped on zipping.")
     config.set(section, "build_skip_files", " .backup1, .backup2, .backup3, .bak, .dbs")
+    config.set(section, "build_dir", "")
     # config.set(section, "# The mentioned files are writtable by giving it some template.")
     # config.set(section, "build_variable_files", "")
     config.set(section, "# -=(Package settings)=-")
@@ -67,9 +68,16 @@ def ini_prop(what, default=None, section="Project"):
 # Read all sections
 def read_parts(rootDir=os.getcwd()):
     project_parts = []
+    build_dir = ini_prop("build_dir");
+    project_dir = None
+    if(len(build_dir) != 0):
+        project_dir = os.path.join(rootDir, ini_prop("build_dir"))
+    else:
+        project_dir = rootDir
+    
     for p in CONFIG.sections():
         if p != PROJECT_SECTION:
-            project_parts.append(part.ProjectPart(p, rootDir))
+            project_parts.append(part.ProjectPart(p, project_dir))
     return project_parts
 
 # The string is a boolean?
@@ -102,6 +110,20 @@ VARIABLE_FILES = ["Language.txt", "GAMEINFO.txt", "changelog.md", "buildinfo.txt
 # ini_prop("build_variable_files", [])
 # 
 SHOWCASE_FILE = ["showcase.txt"]
+
+BUILD_FLAGS = [
+    ["Skip ACS Comp", "Skips the ACS compilation process on each project part.\n" +
+    "You could check this if you're only doing anything else than ACS scripting."],
+    
+    ["Make Version", "Tagges all project part files with their specified version tags.\n" + 
+    "\nIf the pack project flag is activated, the zip file will be tagged too."
+    "\nAnd when entering into the play mode, the tagged zips will be targeted to be played."],
+    
+    ["Pack Project", "All the outputted files will be packed up in a single zip. \n" + 
+    "Just in case you want to grab your stuff to take it to somewhere else."],
+    
+    ["Build-n-Play", "Once the files are built, the game launcher will pop up to test the project"]
+]
 
 def get_version():
     return  EXENAME + " - Ver. " + str(VERSION[0]) + "." + str(VERSION[1]) + "." + str(VERSION[2])

@@ -26,6 +26,7 @@ def makepkg(builder, sourcePath, destPath, notxt=False, skipVariableTexts=False)
     # Count the files...
     basepath = sourcePath.split(os.sep)
     for path, dirs, files in os.walk (sourcePath):
+        
         for file in files:
             if builder.abort: return None
             if not (file_igonre(file) or file == "buildinfo.txt" or (skipVariableTexts and file_placeholder(file))): # special exceptions
@@ -143,13 +144,12 @@ def print_showcase_changes (lang_print=False):
     textfile = open (relativePath ("showcase.txt"), "rt")
     changes = [];
     strchanges = "";
-    color = True
+    # color = True
     for line in textfile:
         if (lang_print):
-            if (line.endswith("\n")): line = line.replace("\n", "")
-            if(color):  strchanges += "\\cg-> \\cn" + line + "\c-\\n"
-            else:       strchanges += "\\ci-> \\cv" + line + "\c-\\n"
-            color = not color
+            if (line.endswith("\n")): line = line.replace("\n", "#")
+            
+            strchanges += line
         else:
             strchanges += line
         
@@ -209,161 +209,10 @@ def relativePath (path):
     return path
 
 # Lil function which it delets deez files.
-def remove_files(file_list):
-    for f in file_list:
-        os.remove(f)
-
-# A powerful function that compiles every single acs library file in the specified directory.
-def acs_compile(builder, part):
-    rootDir     = part.rootdir
-    sourceDir   = part.sourcedir
-    partname    = part.name
-    
-    tools_dir = relativePath(const.ini_prop("acscomp_path", "..\\"));
-    acs_dir = os.path.join(rootDir, sourceDir, "acs");
-    src_dir = os.path.join(rootDir, sourceDir);
-    comp_path = os.path.join(rootDir, tools_dir, const.COMPILER_EXE)
-    if not os.path.isfile(comp_path):
-        builder.ui.AddToLog("> ACS compiler can't find " + const.COMPILER_EXE + "." + 
-        "\nPlease configure the directory on the project.ini file." +
-        "\nACS Compilation skipped.")
-        return 0
-    
-    if not os.path.isdir(acs_dir):
-        builder.ui.AddToLog("> No ACS folder on {0} exists, creating it now.".format(partname))
-        os.mkdir(acs_dir)
-    
-    tmp_dir = os.path.join(tools_dir, "acscomp_tmp");
-    
-    # includes = ['-i'] + [tools_dir] """+ ['-i'] + [src_dir]"""
-    includes = ['-i'] + [tools_dir] + ['-i'] + [tmp_dir]
-    
-    # print(includes);
-    
-    os.chdir(acs_dir);
-    # Get rid of the old compiled files, for a clean build.
-    builder.ui.AddToLog("> Clearing old compiled ACS for {name}".format(name=partname));
-    current = 1;
-    for root, dirs, files in os.walk(os.getcwd()):
-        for file in files:
-            if builder.abort: return -1
-            if file.endswith(".o"):
-               os.remove(os.path.join(root, file));
-               printProgress(builder.ui, current, len(files), '> Cleared', '.o files. (' + file + ')')
-               current += 1;
-    builder.ui.AddToLog("> {name} Old Compiled ACS cleared.".format(name=partname));
-    
-    os.chdir(src_dir);
-    
-    # We should detect the acs libraries, those libraries are a must compile.
-    fileslist = 0;
-    files_copied = []
-    files_to_compile = []
-    builder.ui.AddToLog("> Preparing to compile ACS for {name} ".format(name=partname));
-    for root, dirs, files in os.walk(os.getcwd()):
-        for file in files:
-            if builder.abort: 
-                remove_files(files_copied)
-                os.rmdir(tmp_dir)
-                return -1
-            if file.endswith(".acs"):
-                # Libraries are our compile target, but the acs library file can import/include some more acs.
-                # Either way they must be copied to the acs temporary directory to make it work.
-                acsfile = os.path.join(root, file)
-                with open(acsfile, "r") as acsfile_reader:
-                    if acsfile_reader.read().find("#library") != -1:
-                        files_to_compile.append(acsfile)
-                        builder.ui.AddToLog("> {0} library file has been targeted".format(file));
-                        acsfile_reader.close()
-                copy_dest = os.path.join(tmp_dir,file)
-                if not os.path.exists(tmp_dir):
-                    os.mkdir(tmp_dir)
-                files_copied.append(copy_dest)
-                copyfile(acsfile, copy_dest)
-    
-    # The stage is set! Let the compiling-fest begin!
-    builder.ui.AddToLog("> Compiling ACS for {name}".format(name=partname));
-    current = 0;
-    
-    startupinfo = None
-    if os.name == 'nt':
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-
-    
-    for file in files_to_compile:
-        outs = 0
-        while True:
-            
-            os.chdir(src_dir);
-            
-            # Wait until the ACS Error dialog gives us an answer
-            if outs == 1:
-                if builder.ui.response == 0: # Sthap
-                    builder.ui.AddToLog("> Aborting ACS Compilation.")
-                    builder.abort = True
-                    outs = -1
-                elif builder.ui.response == 1: # Keep going
-                    builder.ui.AddToLog("> Retrying ACS Compilation on the current file ({0}).".format(file))
-                    outs = 0
-                continue
-            
-            if builder.abort: 
-                remove_files(files_copied)
-                os.rmdir(tmp_dir)
-                return -1
-            else:
-                # If you have acs files, compile them like libnraries.
-                
-                f_target = os.path.join(root, file)
-                f_name = os.path.basename(f_target).split('.')[0]
-                f_names = os.path.basename(f_target).split('.')[0] + '.' + os.path.basename(f_target).split('.')[1]
-                
-                compcmd     = [comp_path] + includes + [f_target] + [os.path.join(acs_dir, f_name + '.o')]
-                subprocess.call(compcmd,stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, startupinfo=startupinfo)
-                # acs_err = os.path.join(rootDir, 'acs.err')
-                acs_err = f_target.replace(f_names, 'acs.err')
-                # We got an error in the acs script? Stop it, and show the error ASAP.
-                if os.path.isfile(acs_err):
-                    acs_err_dir = get_file_dir(acs_err)
-                    os.chdir(acs_err_dir);
-                    # os.system('cls')
-                    with open('acs.err', 'rt') as errorlog:
-                        error = errorlog.read()
-                        builder.ui.AddToLog(error)
-                        # builder.ui.ACSErrorOutput(error)
-                        wx.CallAfter(builder.ui.ACSErrorOutput, error + "\n\nDo you wish to RETRY or ABORT the ACS Compilation?")
-                        errorlog.close()
-                    os.remove(os.path.join(acs_err_dir, 'acs.err'))
-                    builder.ui.AddToLog("> The file contains some errors, compilation failed.")
-                    outs = 1
-                    continue
-
-                    # Actually instead of just bouncing you out, I prefer to just repeat the compilation of that file.
-                
-                # Also stop if the expected file was'nt created.
-                if not os.path.isfile(os.path.join(acs_dir, f_name + '.o')):
-                    os.chdir(rootDir);
-                    # os.system('cls')
-                    if(os.path.isfile(acs_err)): os.remove(acs_err)
-                    wx.CallAfter(builder.ui.ACSErrorOutput, "Something blew up :/")
-                    builder.ui.AddToLog("> The expected file was'nt created, compilation failed.")
-                    outs = 1
-                    continue
-                
-                break
-        if(outs == -1):
-            
-            remove_files(files_copied)
-            os.rmdir(tmp_dir)
-            return -1
-        current+=1;
-        printProgress(builder.ui, current, len(files_to_compile), '> Compiled', 'acs files. (' + f_names + ')')
-                
-    
-    # Job's done here, get back to the root directory and continue with the rest.
-    remove_files(files_copied)
-    os.rmdir(tmp_dir)
-    os.chdir(rootDir)
-    builder.ui.AddToLog("> {name} ACS Compiled Sucessfully.".format(name=partname));
-    return 0
+def clear_dir(dir_=os.getcwd()):
+    os.chdir(dir_)
+    if(os.path.isdir(dir_)):
+        for root, dirs, files in os.walk(dir_):
+            for file in files:
+                os.remove(file)
+        os.rmdir(dir_)

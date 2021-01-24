@@ -4,6 +4,8 @@ import source.threads as br
 import source.funs_n_cons_2 as utils
 import source.constants as const
 
+import source.acs_comp as acscomp
+
 from configparser import ConfigParser
 
 class ProjectPart():
@@ -43,7 +45,7 @@ class ProjectPart():
         rootdir    = self.rootdir
         
         destPath = os.path.join(distDir, fileName)
-                
+        
         # Check the flags.
         if (self.skip):
             thread.ui.AddToLog(self.name + " part excluded.")
@@ -56,7 +58,7 @@ class ProjectPart():
         if(noacs):
             thread.ui.AddToLog("ACS Compilation skipped")
         elif(compileacs):
-            res = utils.acs_compile(thread, self)
+            res = acscomp.acs_compile(thread, self)
             
         # Check if the cancel button is called.
         if thread.abort or res == -1:
