@@ -1,5 +1,8 @@
 # Packodaemon Changelog
 
+## v1.3.1 [Bugfix]
+	* Version bumped to 1.3.1
+
 ## v1.3.0 [ACS Comp library parse + a pair of new flags]
 	* #Include and #Import files can be updated now, letting you to modify and press retry after the ACS error.
 	* Now the packing script can put the proper tag to the zip.
