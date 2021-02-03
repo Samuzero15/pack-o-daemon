@@ -1,5 +1,11 @@
 # Packodaemon Changelog
 
+## v1.3.2 [Some small but important fixes]
+	* Fixes on the ACS Parser. ACS is case insensitive, but ZDoom not. oof
+	* Word-wrap disabled for the result dialogs, because im tired of moving the horizontal bar
+	* A bit of cleanup in the log messages
+	* The dependency detection can be skipped if asked to.
+
 ## v1.3.1 [Bugfix]
 	* Version bumped to 1.3.1
 

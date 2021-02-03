@@ -33,6 +33,9 @@ class ProjectPart():
         pwad = [utils.get_file_name(fullpath),utils.get_file_dir(fullpath)]
         return pwad
     
+    def PartMsg(self, thread, msg):
+        thread.ui.AddToLog(msg, 1);
+    
     def BuildPart(self, thread, versioned, noacs, current, total):
         output = (0, [])
         # Get the data from the section...
@@ -48,15 +51,15 @@ class ProjectPart():
         
         # Check the flags.
         if (self.skip):
-            thread.ui.AddToLog(self.name + " part excluded.")
+            self.PartMsg(thread, self.name + " part excluded.")
             output = (0, [])
             return output
         
         # First compile (If the part contains any acs script.)
         res = 0;
-        thread.ui.AddToLog("\n({1}/{2})\t\t=== Building {0} === ".format(self.name, current, total));
+        self.PartMsg(thread, "({1}/{2})\t\t=== Building {0} === ".format(self.name, current, total));
         if(noacs):
-            thread.ui.AddToLog("ACS Compilation skipped")
+            self.PartMsg(thread, "ACS Compilation skipped")
         elif(compileacs):
             res = acscomp.acs_compile(thread, self)
             
@@ -73,7 +76,7 @@ class ProjectPart():
         target_path = os.path.join(rootdir, distDir)
         if not os.path.exists(target_path):
             os.mkdir(target_path)
-            thread.ui.AddToLog(target_path + " directory created.")
+            self.PartMsg(thread, target_path + " directory created.")
         
         zip = utils.makepkg(thread, sourceDir, destPath, notxt, versioned)
         # Check if the cancel button is called.
@@ -100,11 +103,11 @@ class ProjectPart():
                 return output
         else: 
             zip.close()
-            files = utils.makever(thread.ui, "DEV", rootdir, destPath, notxt)
+            files = utils.makever(thread, "DEV", rootdir, destPath, notxt)
         
         # Part finished! Start the next one.
         output = (0, files)
         
-        thread.ui.AddToLog("({1}/{2})\t\t=== {0} finished ===\n".format(self.name, current, total));
+        self.PartMsg(thread, "({1}/{2})\t\t=== {0} finished ===\n".format(self.name, current, total));
         
         return output

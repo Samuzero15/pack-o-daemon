@@ -12,6 +12,9 @@ import source.constants as const
 from glob import iglob
 from shutil import copyfile
 
+def process_msg(builder, msg):
+    builder.ui.AddToLog(msg, 2)
+
 #
 # Build main package (as .pk3, a good ol' zip, really)
 #
@@ -19,7 +22,7 @@ def makepkg(builder, sourcePath, destPath, notxt=False, skipVariableTexts=False)
     destination = destPath + ".pk3"
     wadinfoPath = destPath + ".txt" # just assume this, 'cause we can.
 
-    builder.ui.AddToLog("> Zipping {filename}".format (filename=destination))
+    process_msg(builder, "Zipping {filename}".format (filename=destination))
     filelist = []
     current = 1
     total_files = 0
@@ -39,20 +42,20 @@ def makepkg(builder, sourcePath, destPath, notxt=False, skipVariableTexts=False)
                 filelist.append((os.path.join (path, file), name,))
     
     if total_files == 0:
-        builder.ui.AddToLog("> There is no files to zip!\n> Are you sure you setted the directory name correctly for {0}?.".format(destination))
+        process_msg(builder, "There is no files to zip!\nAre you sure you setted the directory name correctly for {0}?.".format(destination))
         return None
     
-    builder.ui.AddToLog("> {1} files selected. Zipping {0} now.".format (destination, total_files))
+    process_msg(builder, "{1} files selected. Zipping {0} now.".format (destination, total_files))
     distzip = zipfile.ZipFile(destination, "w", zipfile.ZIP_DEFLATED)
     current = 1
     # And zip'em
     for file in filelist:
         if builder.abort: distzip.close(); return None
         distzip.write(*file)
-        printProgress (builder.ui, current, len(filelist), '> Zipped: ', 'files. (' + file[1] + ')')
+        printProgress (builder, current, len(filelist), 'Zipped: ', 'files. (' + file[1] + ')')
         current += 1
     
-    builder.ui.AddToLog("> {0} Zipped Sucessfully".format(destination))
+    process_msg(builder, "{0} Zipped Sucessfully".format(destination))
     return (distzip)
     
 # Return if this file should be ignored.
@@ -95,23 +98,23 @@ def make_dist_version(builder, zip, rootDir, sourceDir, destPath, relase, notxt)
         current = 1
         if(os.path.isfile(os.path.join(sourceDir, 'buildinfo.txt'))):
             # Get all writeable files and replace them with the version and time.
-            builder.ui.AddToLog("> buildinfo.txt found, makinig up distribution version.")
+            process_msg(builder, "buildinfo.txt found, makinig up distribution version.")
             for file in const.VARIABLE_FILES:
                 if builder.abort or res == -1: return -1;
                 source = sourceDir
                 if (file == 'changelog.md'): source = rootDir
                 if not os.path.isfile(os.path.join(source,file)):
-                    printProgress (builder.ui, current, len(const.VARIABLE_FILES), '> Wrote: ', 'files. [SKIP] (' + file + ')')
+                    printProgress (builder, current, len(const.VARIABLE_FILES), '> Wrote: ', 'files. [SKIP] (' + file + ')')
                     current += 1
                     continue
                 
                 res = maketxt(builder, source, destPath, relase, file)
                 zip.write(wadinfoPath, file)
-                printProgress (builder.ui, current, len(const.VARIABLE_FILES), '> Wrote: ', 'files. (' + file + ')')
+                printProgress (builder, current, len(const.VARIABLE_FILES), '> Wrote: ', 'files. (' + file + ')')
                 current+=1
-        else: builder.ui.AddToLog("> buildinfo.txt not found, skipping versioning.")
+        else: process_msg(builder, "buildinfo.txt not found, skipping versioning.")
     zip.close()
-    file_output = makever(builder.ui, relase, rootDir, destPath, notxt, True)
+    file_output = makever(builder, relase, rootDir, destPath, notxt, True)
         
     
     return (res, file_output)
@@ -156,10 +159,10 @@ def print_showcase_changes (lang_print=False):
     return strchanges
 
 # Copies, and writes versionified files.
-def makever(ui, version, sourceDir, destPath, notxt, versioned=False):
+def makever(builder, version, sourceDir, destPath, notxt, versioned=False):
     file_output = []
     pk3 = destPath + ".pk3"
-    ui.AddToLog("> Setting version to {0} and cleaning up".format(version))
+    process_msg(builder, "Setting version to {0} and cleaning up".format(version))
     if not notxt:
         txt_path = os.path.join(sourceDir,destPath + ".txt")
         pk3_ver = destPath + "_" + version + ".pk3"
@@ -193,11 +196,11 @@ def get_file_name (path):
     return os.path.basename(path).split('.')[0] + "." + os.path.basename(path).split('.')[1]
 
 # Updates the GUI gauge bar.
-def printProgress(ui, iteration, total, prefix = '', suffix = ''):
-    ui.gauge.SetRange(total)
-    ui.gauge.SetValue(iteration)
+def printProgress(builder, iteration, total, prefix = '', suffix = ''):
+    builder.ui.gauge.SetRange(total)
+    builder.ui.gauge.SetValue(iteration)
     percent = ("{0:.2f}").format(100 * (iteration / float(total)))
-    ui.AddToLog(f'{prefix} {percent}% {suffix}')
+    process_msg(builder, f'{prefix} {percent}% {suffix}')
     # print(f'{prefix} {percent}% {suffix}')
 
     
@@ -207,12 +210,3 @@ def relativePath (path):
         path = os.path.join(os.getcwd(), path)
         path = path.replace('..\\', '')
     return path
-
-# Lil function which it delets deez files.
-def clear_dir(dir_=os.getcwd()):
-    os.chdir(dir_)
-    if(os.path.isdir(dir_)):
-        for root, dirs, files in os.walk(dir_):
-            for file in files:
-                os.remove(file)
-        os.rmdir(dir_)

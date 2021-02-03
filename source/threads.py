@@ -107,11 +107,11 @@ class BuildProject(threading.Thread):
                 if self.abort: distzip.close(); return None
                 os.chdir(file[0])
                 distzip.write(file[1])
-                utils.printProgress (self.ui, current, len(files_to_pack), '> Packed: ', 'files. (' + file[1] + ')')
+                utils.printProgress (self.ui, current, len(files_to_pack), 'Packed: ', 'files. (' + file[1] + ')')
                 current += 1
                 
             distzip.close()
-            self.ui.AddToLog("> {0} Packed up Sucessfully".format(fileName))
+            self.ui.AddToLog("{0} Packed up Sucessfully".format(fileName))
             # print(file_list)
         
         os.chdir(rootdir)

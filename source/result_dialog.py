@@ -9,7 +9,7 @@ class ResultDialog(wx.Dialog):
         
         panel = wx.Panel(self);
         label = wx.StaticText(panel, label=header)
-        txt = wx.TextCtrl(panel, value=results, style=wx.TE_MULTILINE | wx.TE_DONTWRAP | wx.TE_READONLY)
+        txt = wx.TextCtrl(panel, value=results, style=wx.TE_MULTILINE | wx.TE_READONLY)
         btn = wx.Button(panel, label="Alright, got it, thanks.")
         
         self.Bind(wx.EVT_BUTTON, self.OnClick, btn)

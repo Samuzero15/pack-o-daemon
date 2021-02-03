@@ -107,9 +107,9 @@ class Main(wx.Frame):
     def ClearLog(self):
         self.log = [];
     
-    def AddToLog(self, msg):
+    def AddToLog(self, msg, order=0):
         self.sb.SetStatusText(msg)
-        self.log.append(msg);
+        self.log.append( '-'*order + ">  " + msg);
     
     def OnBuild(self, e):
         if self.builder is None:

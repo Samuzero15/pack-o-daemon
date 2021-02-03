@@ -13,6 +13,8 @@ ACS_T_LIBRARY = "LIBRARY"
 ACS_T_IMPORT =  "IMPORT"
 ACS_T_INCLUDE = "INCLUDE"
 
+ACS_CHAR_BREAK = [' ', '\t', '\n', '+', '-', '*', '/', '>', '<', '|', '&', '\\']
+
 def acs_dict_token(word):
     tokens = {
         "#library" : ACS_T_LIBRARY,
@@ -36,16 +38,21 @@ def acs_parse_tokens(text):
     word_list = []
     for c in range(len(text)):
         char = text[c]
-        if((char == '\n' or char == ' ') and len(word) != 0):
+        if((char in ACS_CHAR_BREAK) and len(word) != 0):
             
-            word = word.replace("\t", "")
-            word = word.replace("\n", "")
-            word = word.replace(" ", "")
+            for cb in ACS_CHAR_BREAK:
+                word = word.replace(cb, "")
+                
             word = word.lower()
             if(len(word) != 0): word_list.append(word)
             word = ""
         else:
             word += char 
+    
+    if(len(word) != 0): 
+        word_list.append(word)
+        word = ""
+    
     token_mode = 0
     token_type = "TOKEN"
     tokens = []
@@ -64,8 +71,11 @@ def acs_parse_tokens(text):
 def acs_check_library_and_dependencies(builder):
     dependencies = []
     libraries = []
+    utils.process_msg(builder, "Reading dependencies, this might take a while...");
     for root, dirs, files in os.walk(os.getcwd()):
         for file in files:
+            if builder.abort: return -1
+            
             if file.endswith(".acs"):
                 acsfile = os.path.join(root, file)
                 try:
@@ -84,24 +94,32 @@ def acs_check_library_and_dependencies(builder):
     libraries = set(libraries)
     
     # print ("Library dependencies: {0}".format(dependencies))
-    
-    all_dependencies = acs_check_extra_dependencies(dependencies)
+    utils.process_msg(builder, "Checking extra dependencies...");
+    all_dependencies = acs_check_extra_dependencies(builder, dependencies)
+    if (all_dependencies == -1): return -1
     #  print ("All needed are: {0}".format(all_dependencies))
-    builder.ui.AddToLog("> All needed are: {0}".format(all_dependencies))
-    builder.ui.AddToLog("> ACS Compilation Dependencies updated.")
+    utils.process_msg(builder, "All needed are:\n {0}".format(acs_set_to_string(all_dependencies)))
+    utils.process_msg(builder, "ACS Compilation Dependencies detected.")
     return (all_dependencies, libraries)
 
-def acs_check_extra_dependencies(dependencies=[]):
+def acs_check_extra_dependencies(builder, dependencies=[], scanned_deps=[]):
+    if(len(scanned_deps) > 0):
+        dependencies = scanned_deps.symmetric_difference(dependencies)
+        # print(dependencies)
+        
     total_dependencies = dependencies.copy()
     
     for d in dependencies:
-        total_dependencies = total_dependencies.union(acs_file_dependency_check(d, total_dependencies))
+        total_dependencies = total_dependencies.union(acs_file_dependency_check(builder, d, dependencies.union(scanned_deps)))
+        if (total_dependencies == -1): return -1
     return total_dependencies
 
-def acs_file_dependency_check(target_file, dependencies=[]):
+def acs_file_dependency_check(builder, target_file, dependencies=[]):
     new_dependencies = set([])
     for root, dirs, files in os.walk(os.getcwd()):
         for file in files:
+            if builder.abort: return -1
+            
             if file == target_file:
                 acsfile = os.path.join(root, file)
                 try:
@@ -113,12 +131,16 @@ def acs_file_dependency_check(target_file, dependencies=[]):
                         acsfile_reader.close()
                 except FileNotFoundError:
                     pass
-    
+    '''
+    new_dependencies = new_dependencies.union(dependencies)
+    new_dependencies = new_dependencies.difference(dependencies)
+    '''
     # print ("Dependencies in {0} are: {1}".format(target_file, new_dependencies))
     
     if len(new_dependencies) > 0:
         # print ("Detecting inner dependencies for {0}".format(target_file))
-        extra_dependencies = acs_check_extra_dependencies(new_dependencies)
+        extra_dependencies = acs_check_extra_dependencies(builder, dependencies.union(new_dependencies) , dependencies)
+        if (extra_dependencies == -1): return -1
         # print ("Found inner dependencies for file {0}: {1}".format(target_file, extra_dependencies))
         dependencies = dependencies.union(new_dependencies)
         dependencies = dependencies.union(extra_dependencies)
@@ -127,13 +149,45 @@ def acs_file_dependency_check(target_file, dependencies=[]):
     
     return dependencies
 
-def acs_update_compilable_files(builder, partname, tmp_dir, get_files_to_compile=False):
+def acs_set_to_string(this_set):
+    string = ""
+    counter = 0
+    this_list = list(this_set)
+    len_list = len(this_set)
+    for i in range(len_list):
+        if(counter == 8):
+            if(i < len_list - 1):
+                string += this_list[i] + ", \n"
+            else:
+                string += this_list[i] + "\n"
+            counter = 0
+        else:
+            counter += 1 
+            if(i < len_list - 1):
+                string += this_list[i] + ", "
+            else:
+                string += this_list[i]
+    
+    return string
+    
+
+def acs_filename_in(file, this_list):
+    for f in this_list:
+        if file.lower() == f.lower(): return True
+    else: return False
+
+
+def acs_update_compilable_files(builder, partname, src_dir, tmp_dir, get_files_to_compile=False):
+    utils.process_msg(builder, "Checking for ACS script dependencies for {name} ".format(name=partname));
     acs_comp_dependencies =  acs_check_library_and_dependencies(builder)
+    if (acs_comp_dependencies == -1): return -1
     # print(acs_comp_dependencies)
     
+    utils.process_msg(builder, "Coping required files to workspace...")
     files_copied = []
     files_to_compile = []
-    builder.ui.AddToLog("> Checking for ACS script dependencies for {name} ".format(name=partname));
+    
+    os.chdir(src_dir)
     for root, dirs, files in os.walk(os.getcwd()):
         for file in files:
             if builder.abort: 
@@ -141,14 +195,18 @@ def acs_update_compilable_files(builder, partname, tmp_dir, get_files_to_compile
                 return -1
             
                 # Copy the dependencies and libraries to the temporary file
-            if (file in acs_comp_dependencies[1]) or (file in acs_comp_dependencies[0]):
+            if (acs_filename_in(file, acs_comp_dependencies[1].union(acs_comp_dependencies[0]))):
                 acsfile = os.path.join(root, file)
                 copy_dest = os.path.join(tmp_dir,file)
-                if (file in acs_comp_dependencies[1]):
+                if (acs_filename_in(file, acs_comp_dependencies[1])):
                     files_to_compile.append(file)
+                    # utils.process_msg(builder, "File {0} targeted to be compiled.".format(file));
                
                 files_copied.append(copy_dest)
                 copyfile(acsfile, copy_dest)
+                
+                # utils.process_msg(builder, "{0} Copied to acscomp_tmp path".format(file));
+    utils.process_msg(builder, "ACS Compilable files are Updated.")
     if get_files_to_compile: return files_to_compile
 
 # A powerful function that compiles every single acs library file in the specified directory.
@@ -163,13 +221,13 @@ def acs_compile(builder, part):
     comp_path = os.path.join(tools_dir, const.COMPILER_EXE)
     # print(comp_path)
     if not os.path.isfile(comp_path):
-        builder.ui.AddToLog("> ACS compiler can't find " + const.COMPILER_EXE + "." + 
+        utils.process_msg(builder, "ACS compiler can't find " + const.COMPILER_EXE + "." + 
         "\nPlease configure the directory on the project.ini file." +
         "\nACS Compilation skipped.")
         return 0
     
     if not os.path.isdir(acs_dir):
-        builder.ui.AddToLog("> No ACS folder on {0} exists, creating it now.".format(partname))
+        utils.process_msg(builder, "No ACS folder on {0} exists, creating it now.".format(partname))
         os.mkdir(acs_dir)
     
     tmp_dir = os.path.join(tools_dir, "acscomp_tmp");
@@ -186,23 +244,33 @@ def acs_compile(builder, part):
     
     os.chdir(acs_dir);
     # Get rid of the old compiled files, for a clean build.
-    builder.ui.AddToLog("> Clearing old compiled ACS for {name}".format(name=partname));
+    utils.process_msg(builder, "Clearing old compiled ACS for {name}".format(name=partname));
     current = 1;
     for root, dirs, files in os.walk(os.getcwd()):
         for file in files:
             if builder.abort: return -1
             if file.endswith(".o"):
                os.remove(os.path.join(root, file));
-               utils.printProgress(builder.ui, current, len(files), '> Cleared', '.o files. (' + file + ')')
+               utils.printProgress(builder, current, len(files), 'Cleared', '.o files. (' + file + ')')
                current += 1;
-    builder.ui.AddToLog("> {name} Old Compiled ACS cleared.".format(name=partname));
+    utils.process_msg(builder, "{name} Old Compiled ACS cleared.".format(name=partname));
     
     os.chdir(src_dir);
-    files_to_compile = acs_update_compilable_files(builder, partname, tmp_dir, True);
+    files_to_compile = []
+    try:
+        files_to_compile = acs_update_compilable_files(builder, partname, src_dir, tmp_dir, True);
+    except Exception as e:
+        utils.process_msg(builder, "Something went really wrong. Skipping ACS Comp for {0}. ".format(partname));
+        utils.process_msg(builder, "Error msg: {0} ".format(str(e)));
+        os.chdir(rootDir)
+        return 0
+    
+    # If user called to abort.
+    if (files_to_compile == -1): return -1
     
     # print(files_to_compile)
     # The stage is set! Let the compiling-fest begin!
-    builder.ui.AddToLog("> Compiling ACS for {name}".format(name=partname));
+    utils.process_msg(builder, "Compiling ACS for {name}".format(name=partname));
     current = 0;
     
     root = sourceDir
@@ -211,7 +279,7 @@ def acs_compile(builder, part):
     if os.name == 'nt':
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-    
+    utils.process_msg(builder, "Files to Compile: {0}".format(files_to_compile));
     for file in files_to_compile:
         outs = 0
         while True:
@@ -221,13 +289,13 @@ def acs_compile(builder, part):
             # Wait until the ACS Error dialog gives us an answer
             if outs == 1:
                 if builder.ui.response == 0: # Sthap
-                    builder.ui.AddToLog("> Aborting ACS Compilation.")
+                    utils.process_msg(builder, "Aborting ACS Compilation.")
                     builder.abort = True
                     outs = -1
                 elif builder.ui.response == 1: # Keep going
-                    builder.ui.AddToLog("> Retrying ACS Compilation on the current file ({0}).".format(file))
+                    utils.process_msg(builder, "Retrying ACS Compilation on the current file ({0}).".format(file))
                     outs = 0
-                    acs_update_compilable_files(builder, partname, tmp_dir);
+                    acs_update_compilable_files(builder, partname, src_dir, tmp_dir);
                 continue
             
             if builder.abort: 
@@ -236,7 +304,7 @@ def acs_compile(builder, part):
             else:
                 # If you have acs files, compile them like libnraries.
                 
-                f_target = os.path.join(src_dir, file)
+                f_target = os.path.join(tmp_dir, file)
                 f_name = os.path.basename(f_target).split('.')[0]
                 f_names = os.path.basename(f_target).split('.')[0] + '.' + os.path.basename(f_target).split('.')[1]
                 
@@ -256,7 +324,7 @@ def acs_compile(builder, part):
                         wx.CallAfter(builder.ui.ACSErrorOutput, error + "\n\nDo you wish to RETRY or ABORT the ACS Compilation?")
                         errorlog.close()
                     os.remove(os.path.join(acs_err_dir, 'acs.err'))
-                    builder.ui.AddToLog("> The file contains some errors, compilation failed.")
+                    utils.process_msg(builder, "The file contains some errors, compilation failed.")
                     outs = 1
                     continue
 
@@ -268,7 +336,7 @@ def acs_compile(builder, part):
                     # os.system('cls')
                     if(os.path.isfile(acs_err)): os.remove(acs_err)
                     wx.CallAfter(builder.ui.ACSErrorOutput, "Something blew up :/")
-                    builder.ui.AddToLog("> The expected file was'nt created, compilation failed.")
+                    utils.process_msg(builder, "The expected file was'nt created, compilation failed.")
                     outs = 1
                     continue
                 
@@ -277,11 +345,11 @@ def acs_compile(builder, part):
             rmtree(tmp_dir)
             return -1
         current+=1;
-        utils.printProgress(builder.ui, current, len(files_to_compile), '> Compiled', 'acs files. (' + f_names + ')')
+        utils.printProgress(builder, current, len(files_to_compile), 'Compiled', 'acs files. (' + f_names + ')')
                 
     
     # Job's done here, get back to the root directory and continue with the rest.
     rmtree(tmp_dir)
     os.chdir(rootDir)
-    builder.ui.AddToLog("> {name} ACS Compiled Sucessfully.".format(name=partname));
+    utils.process_msg(builder, "{name} ACS Compiled Sucessfully.".format(name=partname));
     return 0
