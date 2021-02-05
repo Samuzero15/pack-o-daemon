@@ -49,6 +49,8 @@ class ProjectPart():
         
         destPath = os.path.join(distDir, fileName)
         
+        os.chdir(rootdir)
+        
         # Check the flags.
         if (self.skip):
             self.PartMsg(thread, self.name + " part excluded.")

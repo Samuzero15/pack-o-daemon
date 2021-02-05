@@ -57,6 +57,7 @@ class BuildProject(threading.Thread):
         
         # Make sure you're on the working directory where you will start the build.
         rootdir = self.ui.rootdir
+        # print("Root dir: " + rootdir)
         os.chdir(rootdir)
         
         parts = self.ui.projectparts

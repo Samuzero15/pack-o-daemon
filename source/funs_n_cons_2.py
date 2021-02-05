@@ -196,11 +196,14 @@ def get_file_name (path):
     return os.path.basename(path).split('.')[0] + "." + os.path.basename(path).split('.')[1]
 
 # Updates the GUI gauge bar.
-def printProgress(builder, iteration, total, prefix = '', suffix = ''):
-    builder.ui.gauge.SetRange(total)
-    builder.ui.gauge.SetValue(iteration)
-    percent = ("{0:.2f}").format(100 * (iteration / float(total)))
-    process_msg(builder, f'{prefix} {percent}% {suffix}')
+def printProgress(builder, iteration=-1, total=10, prefix = '', suffix = ''):
+    if(iteration == -1):
+        builder.ui.gauge.Pulse()
+    else:
+        builder.ui.gauge.SetRange(total)
+        builder.ui.gauge.SetValue(iteration)
+        percent = ("{0:.2f}").format(100 * (iteration / float(total)))
+        process_msg(builder, f'{prefix} {percent}% {suffix}')
     # print(f'{prefix} {percent}% {suffix}')
 
     

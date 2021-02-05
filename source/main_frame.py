@@ -5,12 +5,15 @@ import time
 import sys
 import subprocess
 import zipfile
+import datetime
 import source.threads as thread
 import source.funs_n_cons_2 as utils
 import source.projectpart as part
 import source.play_dialog as pd
 import source.result_dialog as rd
 import source.constants as const
+
+import wx.lib.agw.hyperlink as hl
 
 from configparser import ConfigParser
 
@@ -31,52 +34,33 @@ class Main(wx.Frame):
             dlg = wx.MessageDialog(None, msg, "Missing Project Parts").ShowModal()
             sys.exit()
             
-        wx.Frame.__init__(self, None, title=const.EXENAME, size=(300, 250))
+        wx.Frame.__init__(self, None, title=const.EXENAME, size=(400, 250))
         self.sb = self.CreateStatusBar()
-        
         
         self.panel = wx.Panel(self)
         self.flags = []
-        self.skip_parts = []
         self.log = []
+        self.skip_parts = []
         skip_parts_labels = []
         for part_lbl in self.projectparts:
             skip_parts_labels.append("Skip " + part_lbl.name);
-        
-        panelSizer = wx.BoxSizer(wx.HORIZONTAL)
-        btnsSizer = wx.BoxSizer(wx.VERTICAL)
-        checkSizer = wx.BoxSizer(wx.VERTICAL)
-        ctrlsSizer = wx.BoxSizer(wx.VERTICAL)
-        
-        checkSizer.Add(wx.StaticText(self.panel, label="Skip Build Process on"), 0, wx.CENTER, 2)
-        for i in range(0, len(skip_parts_labels)):
-            self.skip_parts.append(wx.CheckBox(self.panel, label=skip_parts_labels[i]))
-            checkSizer.Add(self.skip_parts[i], 0, wx.ALL, 2)
-        
-        checkSizer.Add(wx.StaticText(self.panel, label="Build Flags"), 0, wx.CENTER, 2)
-        for i in range(0, len(const.BUILD_FLAGS)):
-            tooltip = wx.ToolTip(const.BUILD_FLAGS[i][1])
-            self.flags.append(wx.CheckBox(self.panel, label=const.BUILD_FLAGS[i][0]))
-            self.flags[i].SetToolTip(tooltip);
-            checkSizer.Add(self.flags[i], 0, wx.ALL, 2)
-        
         
         self.btn_build = wx.Button(self.panel,label="Build");
         self.btn_play = wx.Button(self.panel,label="Play");
         self.btn_log = wx.Button(self.panel,label="No Log");
         self.btn_log.Disable()
         
-        self.Bind(wx.EVT_BUTTON, self.OnBuild, self.btn_build);
-        self.Bind(wx.EVT_BUTTON, self.OnPlay, self.btn_play);
-        self.Bind(wx.EVT_BUTTON, self.OnLog, self.btn_log);
-        thread.EVT_BUILDRESULT(self,self.OnBuildResult)
-        thread.EVT_PLAYRESULT(self,self.OnPlayResult)
+        panelSizer = wx.BoxSizer(wx.HORIZONTAL)
+        btnsSizer = wx.BoxSizer(wx.VERTICAL)
+        checkSizer = wx.BoxSizer(wx.VERTICAL)
+        ctrlsSizer = wx.BoxSizer(wx.VERTICAL)
+        linksSizer = wx.BoxSizer(wx.HORIZONTAL)
         
-        self.gauge = wx.Gauge(self.panel, range=10)
+        linksSizer = self._build_links(linksSizer)
+        checkSizer = self._build_checkboxes(checkSizer, skip_parts_labels)
+        btnsSizer  = self._build_buttons(btnsSizer)
         
-        btnsSizer.Add(self.btn_build, 1, wx.CENTER, 2)
-        btnsSizer.Add(self.btn_log, 1, wx.CENTER, 2)
-        btnsSizer.Add(self.btn_play, 1, wx.CENTER, 2)
+        self.gauge = wx.Gauge(self.panel)
         
         panelSizer.Add(checkSizer, 0, wx.CENTER | wx.LEFT | wx.RIGHT , 10)
         panelSizer.Add(btnsSizer, 0, wx.CENTER | wx.LEFT | wx.RIGHT , 10)
@@ -87,14 +71,13 @@ class Main(wx.Frame):
         topSizer.Add(cacodemon, 0, wx.ALL | wx.CENTER, 5)
         topSizer.Add(txt_version, 0, wx.ALL | wx.CENTER, 5)
         topSizer.Add(panelSizer, 0, wx.ALL | wx.CENTER, 5)
-        topSizer.Add(wx.StaticLine(self.panel), 0, wx.ALL | wx.EXPAND, 5);
+        topSizer.Add(wx.StaticLine(self.panel), 0, wx.ALL | wx.EXPAND, 5)
         topSizer.Add(self.gauge, 0, wx.CENTER | wx.ALL | wx.EXPAND, 5)
-        topSizer.Add(wx.StaticLine(self.panel), 0, wx.ALL | wx.EXPAND, 5);
+        topSizer.Add(wx.StaticLine(self.panel), 0, wx.ALL | wx.EXPAND, 5)
+        topSizer.Add(linksSizer, 0, wx.ALL | wx.EXPAND | wx.CENTER, 2)
         
         self.panel.SetSizerAndFit(topSizer)
         self.sb.SetStatusText("Ready")
-        # The play.py and build.py script.
-        
         self.Fit()
         self.Centre(wx.BOTH)
         """
@@ -104,12 +87,85 @@ class Main(wx.Frame):
         """
         self.SetIcon(wx.Icon(utils.get_source_img("HEADA1.png"), wx.BITMAP_TYPE_ANY))
     
+    def _build_links(self, sizer):
+        panel2 = wx.Panel(self.panel, -1)
+        hyper1 = hl.HyperLinkCtrl(panel2, -1, "Git Hub", pos=(25,0),
+                                  URL="https://github.com/Samuzero15/pack-o-daemon")
+        hyper1.SetToolTip(wx.ToolTip("The Pack-O-Daemon Git Hub repository!"))
+        hyper1.EnableRollover(True)
+        
+        hyper2 = hl.HyperLinkCtrl(panel2, -1, "Discord", pos=(90,0),
+                                  URL="#")
+        hyper2.SetToolTip(wx.ToolTip("Samu's Chambers Discord.\nTalk to the author here too."))
+        hyper2.EnableRollover(True)
+        
+        hyper3 = hl.HyperLinkCtrl(panel2, -1, "Patch Notes", pos=(150,0))
+        hyper3.SetToolTip(wx.ToolTip("What's new in this version?"))
+        hyper3.AutoBrowse(False)
+        
+        self.Bind(hl.EVT_HYPERLINK_LEFT, self.OnChangelog, hyper3)
+        
+        sizer.Add(panel2, 0, wx.CENTER | wx.ALL, 1)
+        
+        return sizer
+    
+    def _build_checkboxes(self, sizer, skip_parts_labels):
+        sizer.Add(wx.StaticText(self.panel, label="Skip Build on..."), 0, wx.CENTER, 2)
+        for i in range(0, len(skip_parts_labels)):
+            self.skip_parts.append(wx.CheckBox(self.panel, label=skip_parts_labels[i]))
+            sizer.Add(self.skip_parts[i], 0, wx.ALL, 2)
+        
+        sizer.Add(wx.StaticText(self.panel, label="Build Flags"), 0, wx.CENTER, 2)
+        for i in range(0, len(const.BUILD_FLAGS)):
+            tooltip = wx.ToolTip(const.BUILD_FLAGS[i][1])
+            self.flags.append(wx.CheckBox(self.panel, label=const.BUILD_FLAGS[i][0]))
+            self.flags[i].SetToolTip(tooltip);
+            sizer.Add(self.flags[i], 0, wx.ALL, 2)
+        
+        return sizer
+    
+    def _build_buttons(self, sizer):
+    
+        self.Bind(wx.EVT_BUTTON, self.OnBuild, self.btn_build);
+        self.Bind(wx.EVT_BUTTON, self.OnPlay, self.btn_play);
+        self.Bind(wx.EVT_BUTTON, self.OnLog, self.btn_log);
+        thread.EVT_BUILDRESULT(self,self.OnBuildResult)
+        thread.EVT_PLAYRESULT(self,self.OnPlayResult)
+        
+        sizer.Add(self.btn_build, 1, wx.CENTER, 2)
+        sizer.Add(self.btn_log, 1, wx.CENTER, 2)
+        sizer.Add(self.btn_play, 1, wx.CENTER, 2)
+    
+        return sizer
+    
+    ### ------ ### ------ ### ------ ### ------ ### ------ ### 
+    ### ------ ### ------ ### ------ ### ------ ### ------ ### 
+    ### ------ ### ------ ### ------ ### ------ ### ------ ### 
+    
+    def OnChangelog(self, e):
+        msg = ""
+        changelog_path = utils.resource_path(os.path.join(".", "changelog.md"))
+        try:
+            with open(changelog_path, "rt") as file:
+                for line in file.readlines():
+                    str_line = line
+                    str_line = str_line.replace("\t", "----")
+                    str_line = str_line.replace("##", "-)")
+                    str_line = str_line.replace("* ", "> ")
+                    str_line = str_line.replace("# ", "")
+                    msg += str_line
+        except:
+            msg = "Changelog.md not found."
+        
+        dlg = rd.MSGDialog(self, msg, "Patch notes.").ShowModal()
+    
     def ClearLog(self):
         self.log = [];
     
     def AddToLog(self, msg, order=0):
+        time = datetime.datetime.now()
         self.sb.SetStatusText(msg)
-        self.log.append( '-'*order + ">  " + msg);
+        self.log.append( "["+ time.strftime('%H:%M:%S') +']'+'-'*order + ">  " + msg);
     
     def OnBuild(self, e):
         if self.builder is None:
@@ -159,20 +215,18 @@ class Main(wx.Frame):
         
         result = ""
         title = ""
-        if(not skip_a_part): 
+        if(not skip_a_part and not (noacs or versioned or packed or play_it)): 
             if completed: title = "Full build completed."
             elif failure: 
                 title = "Full build interrupted."
         else: 
-            for part in self.projectparts:
-                if part.skip:
-                    title += "\n -) " + part.name + " part skipped."
-                    
-        if(noacs or versioned or packed or play_it):
             if(completed): 
                 title = "Build completed with the following flags."
             elif failure: 
                 title = "Build interrupted with the following flags."
+            for part in self.projectparts:
+                if part.skip:
+                    title += "\n -) " + part.name + " part skipped."
             
         if(noacs):  title += "\n -) ACS compilation skipped."
         if(versioned):  title += "\n -) Tagged to the respective versions.";

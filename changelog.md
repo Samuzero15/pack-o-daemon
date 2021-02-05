@@ -1,5 +1,15 @@
 # Packodaemon Changelog
 
+## v1.4.0 [UI Trinkets + Some Fixes]
+	* Now the output text in the result dialog will obey the word-wrapping rule depending on the new checkbox state.
+	* Now for some tasks that requires some indeterminate time, the gauge will pulse, waiting for a response.
+	* Each message from the output will print out the time now.
+	* Some cleanup made on the main frame.
+	* Some hyperlinks are added at the bottom of the program, just cause screw it.
+	* Fixin' some bugs about the file routing in the ACS compiler
+	* Ah yeah, now you can see the current patch notes about this thingy. Yay I guess?
+	* The ACS Compilation can update the dependencies on each Retry button click.
+
 ## v1.3.2 [Some small but important fixes]
 	* Fixes on the ACS Parser. ACS is case insensitive, but ZDoom not. oof
 	* Word-wrap disabled for the result dialogs, because im tired of moving the horizontal bar

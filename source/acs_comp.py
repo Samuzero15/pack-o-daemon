@@ -98,7 +98,7 @@ def acs_check_library_and_dependencies(builder):
     all_dependencies = acs_check_extra_dependencies(builder, dependencies)
     if (all_dependencies == -1): return -1
     #  print ("All needed are: {0}".format(all_dependencies))
-    utils.process_msg(builder, "All needed are:\n {0}".format(acs_set_to_string(all_dependencies)))
+    utils.process_msg(builder, "All needed are: {0}".format(acs_set_to_string(all_dependencies)))
     utils.process_msg(builder, "ACS Compilation Dependencies detected.")
     return (all_dependencies, libraries)
 
@@ -155,18 +155,13 @@ def acs_set_to_string(this_set):
     this_list = list(this_set)
     len_list = len(this_set)
     for i in range(len_list):
-        if(counter == 8):
-            if(i < len_list - 1):
-                string += this_list[i] + ", \n"
-            else:
-                string += this_list[i] + "\n"
-            counter = 0
+        counter += 1 
+        if(i < len_list - 2):
+            string += this_list[i] + ", "
+        elif(i < len_list - 1):
+            string += this_list[i] + " and "
         else:
-            counter += 1 
-            if(i < len_list - 1):
-                string += this_list[i] + ", "
-            else:
-                string += this_list[i]
+            string += this_list[i]
     
     return string
     
@@ -179,6 +174,7 @@ def acs_filename_in(file, this_list):
 
 def acs_update_compilable_files(builder, partname, src_dir, tmp_dir, get_files_to_compile=False):
     utils.process_msg(builder, "Checking for ACS script dependencies for {name} ".format(name=partname));
+    utils.printProgress(builder, -1)
     acs_comp_dependencies =  acs_check_library_and_dependencies(builder)
     if (acs_comp_dependencies == -1): return -1
     # print(acs_comp_dependencies)
@@ -215,15 +211,18 @@ def acs_compile(builder, part):
     sourceDir   = part.sourcedir
     partname    = part.name
     
-    tools_dir = utils.relativePath(const.ini_prop("acscomp_path", "..\\"));
-    acs_dir = os.path.join(rootDir, sourceDir, "acs");
+    pathdir = os.path.join(rootDir, sourceDir);
+    
+    os.chdir(builder.ui.rootdir)
+    tools_dir = os.path.join(utils.relativePath(const.ini_prop("acscomp_path", "..\\")));
     src_dir = os.path.join(rootDir, sourceDir);
+    acs_dir = os.path.join(pathdir, "acs");
     comp_path = os.path.join(tools_dir, const.COMPILER_EXE)
-    # print(comp_path)
+    
     if not os.path.isfile(comp_path):
         utils.process_msg(builder, "ACS compiler can't find " + const.COMPILER_EXE + "." + 
-        "\nPlease configure the directory on the project.ini file." +
-        "\nACS Compilation skipped.")
+        "Please configure the directory on the project.ini file." +
+        "ACS Compilation skipped.")
         return 0
     
     if not os.path.isdir(acs_dir):
@@ -255,49 +254,52 @@ def acs_compile(builder, part):
                current += 1;
     utils.process_msg(builder, "{name} Old Compiled ACS cleared.".format(name=partname));
     
-    os.chdir(src_dir);
-    files_to_compile = []
-    try:
-        files_to_compile = acs_update_compilable_files(builder, partname, src_dir, tmp_dir, True);
-    except Exception as e:
-        utils.process_msg(builder, "Something went really wrong. Skipping ACS Comp for {0}. ".format(partname));
-        utils.process_msg(builder, "Error msg: {0} ".format(str(e)));
-        os.chdir(rootDir)
-        return 0
-    
-    # If user called to abort.
-    if (files_to_compile == -1): return -1
-    
-    # print(files_to_compile)
-    # The stage is set! Let the compiling-fest begin!
-    utils.process_msg(builder, "Compiling ACS for {name}".format(name=partname));
-    current = 0;
-    
-    root = sourceDir
-    
+    # Work-arround to hide the acc console.
     startupinfo = None
     if os.name == 'nt':
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-    utils.process_msg(builder, "Files to Compile: {0}".format(files_to_compile));
-    for file in files_to_compile:
-        outs = 0
-        while True:
+    
+    os.chdir(src_dir);
+    outs = 0
+    while True:
+        # Wait until the ACS Error dialog gives us an answer
+        if outs == 1:
+            if builder.ui.response == 0: # Sthap
+                utils.process_msg(builder, "Aborting ACS Compilation.")
+                builder.abort = True
+                outs = -1
+            elif builder.ui.response == 1: # Again
+                # rmtree(tmp_dir) # Refresh the acs again!
+                utils.process_msg(builder, "Retrying ACS Compilation.".format(file))
+                outs = 0
+            continue
             
-            os.chdir(src_dir);
-            
-            # Wait until the ACS Error dialog gives us an answer
-            if outs == 1:
-                if builder.ui.response == 0: # Sthap
-                    utils.process_msg(builder, "Aborting ACS Compilation.")
-                    builder.abort = True
-                    outs = -1
-                elif builder.ui.response == 1: # Keep going
-                    utils.process_msg(builder, "Retrying ACS Compilation on the current file ({0}).".format(file))
-                    outs = 0
-                    acs_update_compilable_files(builder, partname, src_dir, tmp_dir);
-                continue
-            
+        if(outs == -1):
+            os.chdir(rootDir)
+            rmtree(tmp_dir)
+    
+            return -1
+        
+        if(outs == 2): break
+        
+        files_to_compile = []
+        try:
+            files_to_compile = acs_update_compilable_files(builder, partname, src_dir, tmp_dir, True);
+        except Exception as e:
+            utils.process_msg(builder, "Something went really wrong. Skipping ACS Comp for {0}. ".format(partname));
+            utils.process_msg(builder, "Error msg: {0} ".format(str(e)));
+            os.chdir(rootDir)
+            return 0
+        
+        # If user called to abort.
+        if (files_to_compile == -1): return -1
+    
+        # print(files_to_compile)
+        # The stage is set! Let the compiling-fest begin!
+        utils.process_msg(builder, "Compiling ACS for {name}".format(name=partname));
+        current = 0;
+        for file in files_to_compile:
             if builder.abort: 
                 rmtree(tmp_dir)
                 return -1
@@ -339,17 +341,15 @@ def acs_compile(builder, part):
                     utils.process_msg(builder, "The expected file was'nt created, compilation failed.")
                     outs = 1
                     continue
-                
-                break
-        if(outs == -1):
-            rmtree(tmp_dir)
-            return -1
-        current+=1;
-        utils.printProgress(builder, current, len(files_to_compile), 'Compiled', 'acs files. (' + f_names + ')')
-                
-    
+                    
+                current+=1;
+                utils.printProgress(builder, current, len(files_to_compile), 'Compiled', 'acs files. (' + f_names + ')')
+        
+        if outs == 0: 
+            utils.process_msg(builder, "{name} ACS Compiled Sucessfully.".format(name=partname));
+            outs = 2
     # Job's done here, get back to the root directory and continue with the rest.
-    rmtree(tmp_dir)
+    
     os.chdir(rootDir)
-    utils.process_msg(builder, "{name} ACS Compiled Sucessfully.".format(name=partname));
+    rmtree(tmp_dir)
     return 0
