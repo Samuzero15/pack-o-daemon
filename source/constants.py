@@ -2,6 +2,7 @@ import os
 import datetime
 import source.projectpart as part
 from configparser import ConfigParser
+from random import randint
 
 # I know, they're variables 
 # but since you use the program and rarely the ini file... there is'nt a better place.
@@ -99,7 +100,7 @@ def str_is_int(stringy):
         pass
     return res
 
-VERSION = (1, 4, 0)
+VERSION = (1, 4, 1)
 EXENAME = "Pack-o-daemon"
 COMPILER_EXE = "acc.exe"
 TODAY = datetime.datetime.now().strftime('%d/%m/%Y')
@@ -124,6 +125,36 @@ BUILD_FLAGS = [
     
     ["Build-n-Play", "Once the files are built, the game launcher will pop up to test the project"]
 ]
+
+accept_msg = [
+    "Done",
+    "Nice",
+    "Alright",
+    "Got it",
+    "Good"
+]
+
+funny_msg = [
+    "Okie-Dokie",
+    "Iz Nice",
+    "Sexelent!",
+    "*Aproval Hisses*",
+    "Good Stuff",
+    "Cool",
+    "Not bad",
+    "EPIC",
+    "What?",
+    "UwU",
+    "AAAAAAAA",
+    "Why are you reading this?"
+]
+
+def get_funny_msg():
+    return funny_msg[randint(0, len(funny_msg) - 1)]
+
+def get_accept_msg():
+    return accept_msg[randint(0, len(accept_msg) - 1)]
+
 
 def get_version():
     return  EXENAME + " - Ver. " + str(VERSION[0]) + "." + str(VERSION[1]) + "." + str(VERSION[2])

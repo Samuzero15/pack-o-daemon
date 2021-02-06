@@ -1,5 +1,9 @@
 # Packodaemon Changelog
 
+## v1.4.1 [Fooling arround with logs]
+	* Now the changelog will be shown in this little tabbed window :3 (It's synched with the changelog.md file :3)
+	* Random accept messages can appear in the log result.
+	
 ## v1.4.0 [UI Trinkets + Some Fixes]
 	* Now the output text in the result dialog will obey the word-wrapping rule depending on the new checkbox state.
 	* Now for some tasks that requires some indeterminate time, the gauge will pulse, waiting for a response.

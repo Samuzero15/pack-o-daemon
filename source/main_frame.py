@@ -145,19 +145,27 @@ class Main(wx.Frame):
     def OnChangelog(self, e):
         msg = ""
         changelog_path = utils.resource_path(os.path.join(".", "changelog.md"))
+        allchanges = []
         try:
+            change_ver = ""
+            titled_ver = ""
+            copy_it = False 
             with open(changelog_path, "rt") as file:
                 for line in file.readlines():
-                    str_line = line
-                    str_line = str_line.replace("\t", "----")
-                    str_line = str_line.replace("##", "-)")
-                    str_line = str_line.replace("* ", "> ")
-                    str_line = str_line.replace("# ", "")
-                    msg += str_line
-        except:
-            msg = "Changelog.md not found."
-        
-        dlg = rd.MSGDialog(self, msg, "Patch notes.").ShowModal()
+                    if(line.startswith("## ")): 
+                        if(copy_it): allchanges.append((titled_ver, change_ver))
+                        titled_ver = line
+                        change_ver = ""
+                        copy_it = True
+                    else:
+                        if(copy_it):
+                            change_ver += line
+                        
+            allchanges.append((titled_ver, change_ver))
+            dlg = rd.ChangelogDialog(self, allchanges).ShowModal()
+        except Exception as e:
+            msg = "Failed to show the changelog!\n" + str(e)
+            dlg = wx.MessageDialog(None, msg, "Oh noes!").ShowModal()
     
     def ClearLog(self):
         self.log = [];
