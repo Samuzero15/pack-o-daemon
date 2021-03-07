@@ -100,7 +100,7 @@ def str_is_int(stringy):
         pass
     return res
 
-VERSION = (1, 4, 1)
+VERSION = (1, 4, 2)
 EXENAME = "Pack-o-daemon"
 COMPILER_EXE = "acc.exe"
 TODAY = datetime.datetime.now().strftime('%d/%m/%Y')
@@ -123,7 +123,10 @@ BUILD_FLAGS = [
     ["Pack Project", "All the outputted files will be packed up in a single zip. \n" + 
     "Just in case you want to grab your stuff to take it to somewhere else."],
     
-    ["Build-n-Play", "Once the files are built, the game launcher will pop up to test the project"]
+    ["Build-n-Play", "Once the files are built, the game launcher will pop up to test the project"],
+    
+    ["Snapshot Ver.", "If versioning is true.\n"+
+    "Instead of using the config file tag relase, use a date-formatted tag.\n"]
 ]
 
 accept_msg = [
@@ -148,6 +151,14 @@ funny_msg = [
     "AAAAAAAA",
     "Why are you reading this?"
 ]
+
+
+def get_snapshot_build_tag():
+    return datetime.datetime.now().strftime('%d-%m-%y_%H-%M-%S')
+
+# Get the possible snapshot tag.
+SNAPSHOT_LAST = get_snapshot_build_tag()
+
 
 def get_funny_msg():
     return funny_msg[randint(0, len(funny_msg) - 1)]

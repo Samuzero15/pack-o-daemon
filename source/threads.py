@@ -53,6 +53,7 @@ class BuildProject(threading.Thread):
         noacs = self.ui.flags[0].GetValue();
         versioned = self.ui.flags[1].GetValue();
         packed = self.ui.flags[2].GetValue();
+        snapshot = self.ui.flags[4].GetValue();
         
         
         # Make sure you're on the working directory where you will start the build.
@@ -75,7 +76,7 @@ class BuildProject(threading.Thread):
         files_to_pack = []
         # Good, now start.
         for part in parts:
-            output = part.BuildPart(self, versioned, noacs, current, total)
+            output = part.BuildPart(self, versioned, noacs, snapshot, current, total)
             
             if not part.skip: current += 1
             if output[0] != 0 or self.abort:
@@ -91,28 +92,30 @@ class BuildProject(threading.Thread):
             os.chdir(rootdir)
             
             distDir  = const.ini_prop('zip_dir',  'dist\packed');
-            fileName = const.ini_prop('zip_name', 'project');
+            filename = const.ini_prop('zip_name', 'project');
             
             if not os.path.exists(distDir):
                 os.mkdir(distDir)
                 self.ui.AddToLog(distDir + " directory created to allocate the packed projects.")
                     
-            if versioned: fileName += "_" + const.ini_prop('zip_tag','v0') + '.zip'
-            else        : fileName += "_" + "DEV" + '.zip'
+            if versioned: 
+                if snapshot : filename += "_" + self.ui.snapshot_tag + '.zip'
+                else        : filename += "_" + const.ini_prop('zip_tag','v0') + '.zip'
+            else        : filename += "_" + "DEV" + '.zip'
             
             
-            destination = os.path.join(distDir, fileName)
+            destination = os.path.join(distDir, filename)
             distzip = zipfile.ZipFile(destination, "w", zipfile.ZIP_DEFLATED)
             current = 1
             for file in files_to_pack:
                 if self.abort: distzip.close(); return None
                 os.chdir(file[0])
                 distzip.write(file[1])
-                utils.printProgress (self.ui, current, len(files_to_pack), 'Packed: ', 'files. (' + file[1] + ')')
+                utils.printProgress (self, current, len(files_to_pack), 'Packed: ', 'files. (' + file[1] + ')')
                 current += 1
                 
             distzip.close()
-            self.ui.AddToLog("{0} Packed up Sucessfully".format(fileName))
+            self.ui.AddToLog("{0} Packed up Sucessfully".format(filename))
             # print(file_list)
         
         os.chdir(rootdir)

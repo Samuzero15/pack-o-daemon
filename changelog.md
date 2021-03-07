@@ -1,5 +1,11 @@
 # Packodaemon Changelog
 
+## v1.4.2 [Minor Fixes + Snapshot tagging]
+	* If you want to make temporaly relases (snapshots), the new build-flag will help you out!
+	* Snapshot versions will be loaded up in the play menu but only if you build it first! They're supposed to be temporal.
+	* If build-n-play is checked, the game will run ONLY if the build process was sucessful.
+	* Little touch on the ACS Compiling script.
+
 ## v1.4.1 [Fooling arround with logs]
 	* Now the changelog will be shown in this little tabbed window :3 (It's synched with the changelog.md file :3)
 	* Random accept messages can appear in the log result.

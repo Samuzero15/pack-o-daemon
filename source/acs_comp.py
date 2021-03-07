@@ -205,6 +205,11 @@ def acs_update_compilable_files(builder, partname, src_dir, tmp_dir, get_files_t
     utils.process_msg(builder, "ACS Compilable files are Updated.")
     if get_files_to_compile: return files_to_compile
 
+ACSCOMP_RUNNING = 0
+ACSCOMP_PROMPT = 1
+ACSCOMP_FALLBACK = -1
+ACSCOMP_COMPLETED = 2
+
 # A powerful function that compiles every single acs library file in the specified directory.
 def acs_compile(builder, part):
     rootDir     = part.rootdir
@@ -268,20 +273,21 @@ def acs_compile(builder, part):
             if builder.ui.response == 0: # Sthap
                 utils.process_msg(builder, "Aborting ACS Compilation.")
                 builder.abort = True
-                outs = -1
+                outs = ACSCOMP_FALLBACK
             elif builder.ui.response == 1: # Again
                 # rmtree(tmp_dir) # Refresh the acs again!
                 utils.process_msg(builder, "Retrying ACS Compilation.".format(file))
-                outs = 0
+                outs = ACSCOMP_RUNNING
             continue
             
-        if(outs == -1):
+        if(outs == ACSCOMP_FALLBACK):
             os.chdir(rootDir)
             rmtree(tmp_dir)
-    
             return -1
         
-        if(outs == 2): break
+        if(outs == ACSCOMP_COMPLETED): 
+            utils.process_msg(builder, "{name} ACS Compiled Sucessfully.".format(name=partname));
+            break
         
         files_to_compile = []
         try:
@@ -327,8 +333,8 @@ def acs_compile(builder, part):
                         errorlog.close()
                     os.remove(os.path.join(acs_err_dir, 'acs.err'))
                     utils.process_msg(builder, "The file contains some errors, compilation failed.")
-                    outs = 1
-                    continue
+                    outs = ACSCOMP_PROMPT
+                    break
 
                     # Actually instead of just bouncing you out, I prefer to just repeat the compilation of that file.
                 
@@ -339,15 +345,14 @@ def acs_compile(builder, part):
                     if(os.path.isfile(acs_err)): os.remove(acs_err)
                     wx.CallAfter(builder.ui.ACSErrorOutput, "Something blew up :/")
                     utils.process_msg(builder, "The expected file was'nt created, compilation failed.")
-                    outs = 1
-                    continue
-                    
+                    outs = ACSCOMP_PROMPT
+                    break
+                
                 current+=1;
                 utils.printProgress(builder, current, len(files_to_compile), 'Compiled', 'acs files. (' + f_names + ')')
         
-        if outs == 0: 
-            utils.process_msg(builder, "{name} ACS Compiled Sucessfully.".format(name=partname));
-            outs = 2
+        if outs == ACSCOMP_RUNNING: 
+            outs = ACSCOMP_COMPLETED
     # Job's done here, get back to the root directory and continue with the rest.
     
     os.chdir(rootDir)

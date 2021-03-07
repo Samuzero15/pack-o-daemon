@@ -28,6 +28,8 @@ class Main(wx.Frame):
         self.play_params = [-1,-1,"","",[], [], []]
         self.projectparts = const.read_parts(self.rootdir)
         self.response = -1
+        self.snapshot_tag = const.get_snapshot_build_tag()
+        self.snapshot_tag_last = self.snapshot_tag
         
         if(len(self.projectparts) == 0):
             msg = "There is no project parts in this project!"
@@ -177,6 +179,9 @@ class Main(wx.Frame):
     
     def OnBuild(self, e):
         if self.builder is None:
+            if self.flags[1].GetValue() and self.flags[4].GetValue():
+                self.snapshot_tag_last = self.snapshot_tag
+                self.snapshot_tag = const.get_snapshot_build_tag()
             index = 0
             for p in self.projectparts:
                 p.skip = self.skip_parts[index].GetValue()
@@ -209,6 +214,7 @@ class Main(wx.Frame):
         versioned = self.flags[1].GetValue();
         packed =    self.flags[2].GetValue();
         play_it =   self.flags[3].GetValue();
+        snapshot =  self.flags[4].GetValue();
         
         completed = sucess == thread.BUILD_SUCCESS
         failure = sucess == thread.BUILD_CANCELED or sucess == thread.BUILD_ERROR
@@ -243,7 +249,10 @@ class Main(wx.Frame):
             zip_name = const.ini_prop('zip_name', 'project')
             zip_tag =  const.ini_prop('zip_tag', 'v0')
             if(versioned): 
-                zipfilename = zip_name + "_" + zip_tag + '.zip';
+                if(snapshot):
+                    zipfilename = zip_name + "_" + self.snapshot_tag;
+                else: 
+                    zipfilename = zip_name + "_" + zip_tag + '.zip';
             else:          
                 zipfilename = zip_name + "_DEV.zip";
             title += "\n -) Packed-up in file: " + zipfilename
@@ -303,7 +312,7 @@ class Main(wx.Frame):
         dialog = rd.ResultDialog(self, result[0], result[1]).ShowModal()
         self.lastlog = [result[0], result[1]]
         self.builder = None
-        if (self.flags[3].GetValue()):
+        if (self.flags[3].GetValue() and sucess == thread.BUILD_SUCCESS):
             self.PlayNow(event)
         
 

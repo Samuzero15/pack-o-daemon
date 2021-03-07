@@ -16,7 +16,7 @@ class PlayDialog(wx.Dialog):
     def __init__(self, parent, play_params=[-1,-1,"","",[]]):
         wx.Dialog.__init__(self, parent, title="Play Project", size=(300, 200))
         self.parent = parent
-        self.project_pwads = self.SetUpPwads(parent, play_params[4], parent.flags[1].GetValue())
+        self.project_pwads = self.SetUpPwads(parent, play_params[4])
         pwad_choices = [
         "doom2.wad",
         "doom.wad",
@@ -101,7 +101,12 @@ class PlayDialog(wx.Dialog):
         self.LoadDefaultValues(play_params)
         self.UpdatePWADButtons()
         
-    def SetUpPwads(self, parent, pwad_list, versioned=False):
+    def SetUpPwads(self, parent, pwad_list):
+        versioned = parent.flags[1].GetValue()
+        snapshot = parent.flags[4].GetValue()
+        snapshot_tag = parent.snapshot_tag
+        snapshot_tag_last = parent.snapshot_tag_last
+        
         # Read the INI file, and get the required pwads.
         pwads_before_ini = const.ini_prop('play_pwads_before')
         pwads_before = []
@@ -122,7 +127,7 @@ class PlayDialog(wx.Dialog):
             for pwad in pwads_before:
                 pwad_list.append([utils.get_file_name(pwad),utils.get_file_dir(pwad)])
             for p in parent.projectparts:
-                pwad_list.append(p.GetExpectedPWADS(versioned))
+                pwad_list.append(p.GetExpectedPWADS(versioned, snapshot, snapshot_tag))
             for pwad in pwads_after:
                 pwad_list.append([utils.get_file_name(pwad),utils.get_file_dir(pwad)])
         else:
@@ -130,8 +135,28 @@ class PlayDialog(wx.Dialog):
             index = 0
             for pwadlist in pwad_list:
                 for p in parent.projectparts:
-                    if pwadlist[0] == p.GetExpectedPWADS(not versioned)[0]:
-                        pwad_list[index] = p.GetExpectedPWADS(versioned)
+                    
+                    dev_ver = p.GetExpectedPWADS(False, False, "")
+                    relase_ver = p.GetExpectedPWADS(True, False, "")
+                    snap_ver = p.GetExpectedPWADS(True, True, snapshot_tag)
+                    snap_ver_last = p.GetExpectedPWADS(True, True, snapshot_tag_last)
+                    '''
+                    print("Develop version: " + dev_ver[0])
+                    print("Relase version: " + relase_ver[0])
+                    print("Snap version expected: " + snap_ver[0])
+                    print("Last Snap version expected: " + snap_ver_last[0])
+                    print("Current set: " + pwadlist[0])
+                    '''
+                    if(versioned):
+                        if (snapshot):
+                            if pwadlist[0] == dev_ver[0] or pwadlist[0] == relase_ver[0] or pwadlist[0] == snap_ver_last[0]:
+                                pwad_list[index] = snap_ver
+                        else:
+                            if pwadlist[0] == dev_ver[0] or pwadlist[0] == snap_ver[0] or pwadlist[0] == snap_ver_last[0]:
+                                pwad_list[index] = relase_ver
+                    else:
+                        if pwadlist[0] == relase_ver[0] or pwadlist[0] ==  snap_ver[0] or pwadlist[0] == snap_ver_last[0]:
+                            pwad_list[index] = dev_ver
                 index += 1
         return pwad_list
     

@@ -62,9 +62,6 @@ class ChangelogDialog(wx.Dialog):
         
         # print(tab_data)
         # print(tab_data[0])
-        
-        
-        
         panel = wx.Panel(self);
         cont = wx.BoxSizer(wx.VERTICAL)
         
@@ -75,9 +72,6 @@ class ChangelogDialog(wx.Dialog):
         for data in tab_data:
             tab = TabText(nb, data[0], data[1])
             nb.AddPage(tab, tab.ver)
-        
-        
-        # txt = wx.TextCtrl(panel, value="Yeet", size=(250,300), style=wx.TE_MULTILINE | wx.TE_READONLY)
         
         cont.Add(nb, 2, wx.CENTER | wx.EXPAND | wx.ALL, 10)
         cont.Add(btn, 0, wx.SOUTH | wx.CENTER, 10)
