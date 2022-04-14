@@ -1,5 +1,9 @@
 # Packodaemon Changelog
 
+## v1.4.3 [Reordering repository]
+	* Reordering the files, separating the soruce from the python env files. (In order to make the repository setup easier and constant)
+	* Updating Readme.md
+
 ## v1.4.2 [Minor Fixes + Snapshot tagging]
 	* If you want to make temporaly relases (snapshots), the new build-flag will help you out!
 	* Snapshot versions will be loaded up in the play menu but only if you build it first! They're supposed to be temporal.

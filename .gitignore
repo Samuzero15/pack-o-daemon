@@ -4,3 +4,4 @@ dist/
 project.ini
 __pycache__/
 doomproject/
+env/

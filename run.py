@@ -2,8 +2,8 @@
 import wx
 import os
 import sys
-import source.main_frame as frame
-import source.constants as const
+import src.main_frame as frame
+import src.constants as const
 
 from configparser import ConfigParser
 

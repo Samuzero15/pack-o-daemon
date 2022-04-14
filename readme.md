@@ -21,7 +21,7 @@ Literally just clicks away before playing your project.
 
 #### Why this?
 * For the people who likes to work in their local directory using the file explorer.
-* Allows you to use extern programs directly. (Audacity, Photoshop, Notepad++, Sublime Text, you name it)
+* Allows you to use third party programs directly. (Audacity, Photoshop, Notepad++, Sublime Text, you name it)
 * Smack some git repository in there to save your progress in your project.
 * You like Slade, but you're kind of alergic to the text editor.
 
@@ -42,13 +42,13 @@ If you change something from the project.ini file, and you have the executable r
 1. Pack-O-Daemon uses the power of **Python 3.8.5**, so get that version or better.
 2. Clone the repository, and extract it.
 3. Get the console and ```cd``` it to the extracted repository.
-4. In the console, use the command ```scripts\activate```, and check if "(env)" is right next to the command prompt line.
-5. Now get the requirements installed with ```pip install -r requirements.txt```
-6. And you're ready to go, it depends on what you want to do.
-	> * To run it, do step 4, and then ```run.py```
+4. Make a new virtual enviroment with ```python -m venv env```,
+5. Use the command ```.\env\scripts\activate```, and check if "(env)" is right next to the command prompt line.
+6. Now get the requirements installed with ```pip install -r requirements.txt```
+7. And you're ready to go, it depends on what you want to do.
+	> * To run it, do step 5 if env is not activated, and then ```run.py```
 	> * To build it, use the make.bat file in windows. Sadly I dont know how to install it on any linux distribution, or in MAC-OS derivated systems. (A bit of help on this part plz)
 
-If you need an executable for your OS, build it with the bat, that should compile it to .tar.gz or to .exe
 You can use any text editor if you wish.
 
 #### Frequently Asked Questions
