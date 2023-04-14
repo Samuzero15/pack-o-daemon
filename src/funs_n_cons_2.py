@@ -1,6 +1,7 @@
 # Constants and useful functions.
 
 import os
+from pathlib import Path
 import sys
 import threading
 import zipfile
@@ -8,7 +9,7 @@ import datetime
 import subprocess
 import wx
 from configparser import ConfigParser
-import source.constants as const
+import src.constants as const
 from glob import iglob
 from shutil import copyfile
 
@@ -32,7 +33,7 @@ def makepkg(builder, sourcePath, destPath, notxt=False, skipVariableTexts=False)
         
         for file in files:
             if builder.abort: return None
-            if not (file_igonre(file) or file == "buildinfo.txt" or (skipVariableTexts and file_placeholder(file))): # special exceptions
+            if not (file_igonre(file) or (skipVariableTexts and file_placeholder(file))): # special exceptions
             # Remove sourcepath from filenames in zip
                 total_files += 1
                 splitpath = path.split(os.sep)
@@ -45,14 +46,40 @@ def makepkg(builder, sourcePath, destPath, notxt=False, skipVariableTexts=False)
         process_msg(builder, "There is no files to zip!\nAre you sure you setted the directory name correctly for {0}?.".format(destination))
         return None
     
-    process_msg(builder, "{1} files selected. Zipping {0} now.".format (destination, total_files))
-    distzip = zipfile.ZipFile(destination, "w", zipfile.ZIP_DEFLATED)
+    compress_type = str(const.ini_prop("zip_compress_type")).lower()
+    compress_type_str = ""
+    
+    if compress_type == "bzip2":          compress_type = zipfile.ZIP_BZIP2; compress_type_str="BZip2"
+    elif compress_type == "lzma":       compress_type = zipfile.ZIP_LZMA; compress_type_str="LZMA"
+    elif compress_type == "stored":     compress_type = zipfile.ZIP_STORED; compress_type_str="Stored"
+    else:                               compress_type = zipfile.ZIP_DEFLATED; compress_type_str="Deflate"
+
+    process_msg(builder, "{1} files selected. Zipping {0} now. Format compression: '{2}'".format (destination, total_files, compress_type_str))
+
+    distzip = zipfile.ZipFile(destination, "w", compress_type)
     current = 1
     # And zip'em
     for file in filelist:
         if builder.abort: distzip.close(); return None
         distzip.write(*file)
         printProgress (builder, current, len(filelist), 'Zipped: ', 'files. (' + file[1] + ')')
+        current += 1
+    
+    additional_files = const.ini_prop("build_add_files")
+    current = 1
+    process_msg(builder, "Adding the extra files. {0} extra files to be added.".format(len(additional_files)))
+    for file in additional_files:
+        try:
+            path2file = os.path.join(relativePath(file))
+            dirName = os.path.dirname(path2file)
+            file_to_copy = os.path.basename(path2file)
+            print(dirName)
+            print(file_to_copy)
+            os.chdir(dirName)
+            distzip.write(file_to_copy)
+            printProgress (builder, current, len(additional_files), 'Zipped: ', 'files. (' + file + ')')
+        except:
+            process_msg(builder, "File '{0}' Not found, skipping to next file.".format(file))
         current += 1
     
     process_msg(builder, "{0} Zipped Sucessfully".format(destination))
@@ -70,11 +97,11 @@ def file_igonre(file):
     
 # Return if this file is a placeholding file.
 def file_placeholder(file):
-    should_ignore = False;
-    for f in const.VARIABLE_FILES:
-        if not (should_ignore): should_ignore = (file == f);
-        else: break;
-    return should_ignore;
+    should_ignore = False
+    for f in const.ini_prop("string_replacer")["files_to_replace"]:
+        if not (should_ignore): should_ignore = (file == f)
+        else: break
+    return should_ignore
 
 # Calls any resource within the executable program.
 def resource_path(relative_path):
@@ -86,7 +113,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 def get_source_img(img):
-    return resource_path(os.path.join("source/imgs", img));
+    return resource_path(os.path.join("src/imgs", img))
 
 #
 # Make a distribution version
@@ -96,23 +123,24 @@ def make_dist_version(builder, zip, rootDir, sourceDir, destPath, relase, notxt)
     if not notxt: 
         wadinfoPath = destPath + ".txt"
         current = 1
-        if(os.path.isfile(os.path.join(sourceDir, 'buildinfo.txt'))):
+        #if(os.path.isfile(os.path.join(sourceDir, 'buildinfo.txt'))):
             # Get all writeable files and replace them with the version and time.
-            process_msg(builder, "buildinfo.txt found, makinig up distribution version.")
-            for file in const.VARIABLE_FILES:
-                if builder.abort or res == -1: return -1;
-                source = sourceDir
-                if (file == 'changelog.md'): source = rootDir
-                if not os.path.isfile(os.path.join(source,file)):
-                    printProgress (builder, current, len(const.VARIABLE_FILES), '> Wrote: ', 'files. [SKIP] (' + file + ')')
-                    current += 1
-                    continue
-                
-                res = maketxt(builder, source, destPath, relase, file)
-                zip.write(wadinfoPath, file)
-                printProgress (builder, current, len(const.VARIABLE_FILES), '> Wrote: ', 'files. (' + file + ')')
-                current+=1
-        else: process_msg(builder, "buildinfo.txt not found, skipping versioning.")
+            # process_msg(builder, "buildinfo.txt found, making up distribution version.")
+        variable_files = const.ini_prop("string_replacer")["files_to_replace"]
+        for file in variable_files:
+            if builder.abort or res == -1: return -1
+            source = sourceDir
+            # if (file == 'changelog.md'): source = rootDir
+            if not os.path.isfile(os.path.join(source,file)):
+                printProgress (builder, current, len(variable_files), '> Wrote: ', 'files. [SKIP] (' + file + ')')
+                current += 1
+                continue
+            
+            res = maketxt(builder, source, destPath, relase, file)
+            zip.write(wadinfoPath, file)
+            printProgress (builder, current, len(variable_files), '> Wrote: ', 'files. (' + file + ')')
+            current+=1
+        # else: process_msg(builder, "buildinfo.txt not found, skipping versioning.")
     zip.close()
     file_output = makever(builder, relase, rootDir, destPath, notxt, True)
         
@@ -125,37 +153,54 @@ def maketxt(builder, sourcePath, destPath, version, filetemplate):
     destname = destPath + ".txt"
     
     aborted = False
+    strings_to_replace = const.ini_prop("string_replacer")["strings_to_replace"]
     
+    #print(strings_to_replace)
+    # Check the string replacer keys in case of file types. And notifies the user if the path from one of them is missing.
+    for key, value in strings_to_replace.items():
+        if builder.abort: aborted == True; break
+        if value["type"] == "file" and not os.path.isfile(relativePath(value["content"])):
+            process_msg (builder, "(String Repleacer) File '{0}' not found.".format(relativePath(value["content"])))
+
     sourcefile = open (textname, "rt")
     textfile = open (destname, "wt")
     for line in sourcefile:
-        
-        if builder.abort: aborted == True; break;
-        line = line.replace('x.x.x', version)
-        line = line.replace('_SHOWCASE_', print_showcase_changes (filetemplate == "Language.txt"))
-        line = line.replace('_DEV_', version)
-        line = line.replace('XX/XX/XXXX', const.TODAY)
+        if builder.abort: aborted == True; break
+        for key, value in strings_to_replace.items():
+            if builder.abort: aborted == True; break
+            if value["type"] == "tag":
+                line = line.replace(key, version)
+            elif value["type"] == "file":
+                try:
+                    file_to_copy = open (relativePath(value["content"]), "rt")
+                    content = file_to_copy.read()
+                    if value["language_format"]:
+                        content = format_to_language_string (content)
+                    line = line.replace(key, content)
+                    file_to_copy.close()
+                except:
+                    pass
+            elif value["type"] == "date":
+                line = line.replace(key, datetime.datetime.now().strftime(value["content"]))
+            else:
+                line = line.replace(key, value["content"])
         textfile.write(line)
-    
     textfile.close()
     sourcefile.close()
+    # print("write in file: " + destname)
+    # print(key, value["type"], value["content"])
+    #line = line.replace(key, value["content"])
     
     return 0 + -1*aborted
 
 # Writes the changes to the lines and yeeah, thats it.
-def print_showcase_changes (lang_print=False):
-    textfile = open (relativePath ("showcase.txt"), "rt")
-    changes = [];
-    strchanges = "";
+def format_to_language_string (textfile):
+    strchanges = ""
     # color = True
     for line in textfile:
-        if (lang_print):
-            if (line.endswith("\n")): line = line.replace("\n", "#")
-            
-            strchanges += line
-        else:
-            strchanges += line
-        
+        if (line.endswith("\n")): line = line.replace("\n", "#")
+        strchanges += line
+
     return strchanges
 
 # Copies, and writes versionified files.
@@ -193,7 +238,8 @@ def get_file_dir (path):
 
 # Returns the name from the given file path
 def get_file_name (path):
-    return os.path.basename(path).split('.')[0] + "." + os.path.basename(path).split('.')[1]
+    return Path(path).name
+    # return os.path.basename(path).split('.')[0] + "." + os.path.basename(path).split('.')[1]
 
 # Updates the GUI gauge bar.
 def printProgress(builder, iteration=-1, total=10, prefix = '', suffix = ''):

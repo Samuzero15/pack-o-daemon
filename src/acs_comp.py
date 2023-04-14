@@ -3,8 +3,8 @@ import os
 import sys
 import subprocess
 import wx
-import source.funs_n_cons_2 as utils
-import source.constants as const
+import src.funs_n_cons_2 as utils
+import src.constants as const
 from glob import iglob
 from shutil import copyfile, rmtree
 
@@ -75,22 +75,38 @@ def acs_check_library_and_dependencies(builder):
     for root, dirs, files in os.walk(os.getcwd()):
         for file in files:
             if builder.abort: return -1
+
+            comp_type = const.ini_prop("type", "acc", "acs_compilation")
+            if comp_type == 'bcc':
+                if file.endswith(".bcs"):
+                    acsfile = os.path.join(root, file)
+                    try:
+                        with open(acsfile, "r") as acsfile_reader:
+                            text = acsfile_reader.read()
+                            for t in acs_parse_tokens(text):        
+                                if (t.t_type == ACS_T_INCLUDE or t.t_type == ACS_T_IMPORT):
+                                    dependencies.append(t.t_value.replace("\"", ""))
+                                elif t.t_type == ACS_T_LIBRARY:
+                                    libraries.append(t.t_value.replace("\"", "") + ".bcs")
+                            acsfile_reader.close()
+                    except FileNotFoundError:
+                        pass
+            else:
+                if file.endswith(".acs"):
+                    acsfile = os.path.join(root, file)
+                    try:
+                        with open(acsfile, "r") as acsfile_reader:
+                            text = acsfile_reader.read()
+                            for t in acs_parse_tokens(text):        
+                                if (t.t_type == ACS_T_INCLUDE or t.t_type == ACS_T_IMPORT):
+                                    dependencies.append(t.t_value.replace("\"", ""))
+                                elif t.t_type == ACS_T_LIBRARY:
+                                    libraries.append(t.t_value.replace("\"", "") + ".acs")
+                            acsfile_reader.close()
+                    except FileNotFoundError:
+                        pass
             
-            if file.endswith(".acs"):
-                acsfile = os.path.join(root, file)
-                try:
-                    with open(acsfile, "r") as acsfile_reader:
-                        text = acsfile_reader.read()
-                        for t in acs_parse_tokens(text):        
-                            if (t.t_type == ACS_T_INCLUDE or t.t_type == ACS_T_IMPORT):
-                                dependencies.append(t.t_value.replace("\"", ""))
-                            elif t.t_type == ACS_T_LIBRARY:
-                                libraries.append(t.t_value.replace("\"", "") + ".acs")
-                        acsfile_reader.close()
-                except FileNotFoundError:
-                    pass
     dependencies = set(dependencies)
-    is_library = True
     libraries = set(libraries)
     
     # print ("Library dependencies: {0}".format(dependencies))
@@ -219,14 +235,22 @@ def acs_compile(builder, part):
     pathdir = os.path.join(rootDir, sourceDir);
     
     os.chdir(builder.ui.rootdir)
-    tools_dir = os.path.join(utils.relativePath(const.ini_prop("acscomp_path", "..\\")));
-    src_dir = os.path.join(rootDir, sourceDir);
-    acs_dir = os.path.join(pathdir, "acs");
-    comp_path = os.path.join(tools_dir, const.COMPILER_EXE)
+    comp_path = utils.relativePath(const.ini_prop("executeable", "..\\", "acs_compilation"))
+    tools_dir = os.path.dirname(comp_path)
+    src_dir = os.path.join(rootDir, sourceDir)
+    acs_dir = os.path.join(pathdir, "acs")
     
+    extra_params = const.ini_prop("extra_params", "", section="acs_compilation").split()
+
+    comp_type = const.ini_prop("type", "acc", "acs_compilation")
+    if comp_type == 'bcc':
+        comp_type = 'bcc'
+    else:
+        comp_type = 'acc'
+
     if not os.path.isfile(comp_path):
-        utils.process_msg(builder, "ACS compiler can't find " + const.COMPILER_EXE + "." + 
-        "Please configure the directory on the project.ini file." +
+        utils.process_msg(builder, "ACS compiler can't find '" + comp_path + "'" + 
+        "Please configure the directory on the "+ const.PROJECT_FILE +" file." +
         "ACS Compilation skipped.")
         return 0
     
@@ -244,6 +268,11 @@ def acs_compile(builder, part):
     # includes = ['-i'] + [tools_dir] """+ ['-i'] + [src_dir]"""
     includes = ['-i'] + [tools_dir] + ['-i'] + [tmp_dir]
     
+    if comp_type == 'bcc':
+        includes = ['-i'] + [tools_dir] + ['-i'] + [tmp_dir] + ['-i'] + [utils.relativePath(os.path.join(tools_dir, '..\\lib'))]
+    else:
+        includes = ['-i'] + [tools_dir] + ['-i'] + [tmp_dir]
+
     # print(includes);
     
     os.chdir(acs_dir);
@@ -316,12 +345,19 @@ def acs_compile(builder, part):
                 f_name = os.path.basename(f_target).split('.')[0]
                 f_names = os.path.basename(f_target).split('.')[0] + '.' + os.path.basename(f_target).split('.')[1]
                 
-                compcmd     = [comp_path] + includes + [f_target] + [os.path.join(acs_dir, f_name + '.o')]
-                subprocess.call(compcmd,stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, startupinfo=startupinfo)
+                compcmd     = [comp_path] + includes + [f_target] + [os.path.join(acs_dir, f_name + '.o')] + extra_params
+                if comp_type == 'bcc':
+                    compcmd     = [comp_path] + includes + ['-acc-err'] + [f_target] + [os.path.join(acs_dir, f_name + '.o')] + extra_params
+                else:
+                    compcmd     = [comp_path] + includes + [f_target] + [os.path.join(acs_dir, f_name + '.o')] + extra_params
+                
+
+                subprocess.call(compcmd,stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, startupinfo=startupinfo)
                 # acs_err = os.path.join(rootDir, 'acs.err')
                 acs_err = f_target.replace(f_names, 'acs.err')
                 # We got an error in the acs script? Stop it, and show the error ASAP.
                 if os.path.isfile(acs_err):
+                    wx.Bell()
                     acs_err_dir = utils.get_file_dir(acs_err)
                     os.chdir(acs_err_dir);
                     # os.system('cls')
@@ -340,6 +376,7 @@ def acs_compile(builder, part):
                 
                 # Also stop if the expected file was'nt created.
                 if not os.path.isfile(os.path.join(acs_dir, f_name + '.o')):
+                    wx.Bell()
                     os.chdir(rootDir);
                     # os.system('cls')
                     if(os.path.isfile(acs_err)): os.remove(acs_err)

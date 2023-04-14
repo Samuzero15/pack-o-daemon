@@ -1,10 +1,10 @@
 import wx
 import os
-import source.threads as br
-import source.funs_n_cons_2 as utils
-import source.constants as const
+import src.threads as br
+import src.funs_n_cons_2 as utils
+import src.constants as const
 
-import source.acs_comp as acscomp
+import src.acs_comp as acscomp
 
 from configparser import ConfigParser
 
@@ -13,12 +13,12 @@ class ProjectPart():
         
         self.name           = name
         self.rootdir        = rootdir
-        self.version        = const.ini_prop("relase",            "v0",     name)
-        self.filename       = const.ini_prop("filename",          name,     name)
-        self.acscomp        = const.ini_prop("acscomp",             section=name)
-        self.sourcedir      = const.ini_prop("sourcedir",         "src",    name)
-        self.distdir        = const.ini_prop("distdir",           "dist",   name)
-        self.notxt          = const.ini_prop("notxt",               section=name)
+        self.version        = const.ini_prop_projectparts("release",            "v0",     name)
+        self.filename       = const.ini_prop_projectparts("filename",          name,     name)
+        self.acscomp        = const.ini_prop_projectparts("acscomp",             section=name)
+        self.sourcedir      = const.ini_prop_projectparts("sourcedir",         "src",    name)
+        self.distdir        = const.ini_prop_projectparts("distdir",           "dist",   name)
+        self.notxt          = const.ini_prop_projectparts("notxt",               section=name)
         self.skip           = False
     
     
@@ -32,7 +32,7 @@ class ProjectPart():
             else:            expectfilename = self.filename + "_DEV.pk3"
         else: expectfilename = self.filename + ".pk3"
         fullpath = os.path.join(self.rootdir, os.path.join(self.distdir, expectfilename))
-        print(fullpath)
+        #print(fullpath)
         pwad = [utils.get_file_name(fullpath),utils.get_file_dir(fullpath)]
         return pwad
     
@@ -78,12 +78,14 @@ class ProjectPart():
         
         # After compiling, zip them all.
         # The path does'nt exist? Create it!
+        os.chdir(rootdir)
         target_path = os.path.join(rootdir, distDir)
         if not os.path.exists(target_path):
             os.mkdir(target_path)
             self.PartMsg(thread, target_path + " directory created.")
         
         zip = utils.makepkg(thread, sourceDir, destPath, notxt, versioned)
+        os.chdir(rootdir)
         # Check if the cancel button is called.
         if thread.abort or zip == None:
             if thread.abort:  fail_reason = br.BUILD_CANCELED

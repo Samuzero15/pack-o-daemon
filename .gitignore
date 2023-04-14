@@ -1,7 +1,8 @@
 build/
 dist/
 *.spec
-project.ini
+project.json
+project copy.json
 __pycache__/
 doomproject/
 env/

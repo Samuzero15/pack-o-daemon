@@ -1,6 +1,6 @@
 import wx
 import wx.stc as stc
-import source.constants as c
+import src.constants as c
 
 class ResultDialog(wx.Dialog):
     def __init__(self, parent, header, results, _title="Results"):
@@ -8,25 +8,31 @@ class ResultDialog(wx.Dialog):
         self.Centre()
         
         cont = wx.BoxSizer(wx.VERTICAL)
+        cont_btn = wx.BoxSizer(wx.HORIZONTAL)
         
         panel = wx.Panel(self);
         label = wx.StaticText(panel, label=header)
         self.txt = stc.StyledTextCtrl(panel)
         btn = wx.Button(panel, label=c.get_accept_msg())
+        btn_copy = wx.Button(panel, label="Copy to clipboard")
         self.wrap = wx.CheckBox(panel, label="W. Wrap")
         
         self.txt.SetText(results)
         self.txt.SetReadOnly(True)
         font = wx.Font(8, wx.MODERN, wx.NORMAL, wx.NORMAL, False, u'Consolas')
         self.txt.StyleSetFont(0, font)
+
+        cont_btn.Add(btn, 0, wx.CENTER | wx.ALL, 5)
+        cont_btn.Add(btn_copy, 0, wx.CENTER | wx.ALL, 5)
         
         self.Bind(wx.EVT_BUTTON, self.OnClick, btn)
+        self.Bind(wx.EVT_BUTTON, self.onCopy, btn_copy)
         self.Bind(wx.EVT_CHECKBOX, self.OnWrap, self.wrap)
         
         cont.Add(label, 0, wx.ALL, 2)
         cont.Add(self.txt, 2, wx.ALL | wx.EXPAND | wx.CENTER, 5)
         cont.Add(self.wrap, 0, wx.ALL | wx.CENTER, 1)
-        cont.Add(btn, 0, wx.CENTER | wx.ALL, 5)
+        cont.Add(cont_btn, 0, wx.CENTER | wx.ALL, 5)
         panel.SetSizerAndFit(cont)
     
     def OnClick(self, event):
@@ -34,6 +40,16 @@ class ResultDialog(wx.Dialog):
     
     def OnWrap(self, event):
         self.txt.SetWrapMode(self.wrap.GetValue())
+
+    def onCopy(self, event):
+        self.dataObj = wx.TextDataObject()
+        self.dataObj.SetText(self.txt.GetValue())
+        if wx.TheClipboard.Open():
+            wx.TheClipboard.SetData(self.dataObj)
+            wx.TheClipboard.Close()
+            wx.MessageBox("Copied to the clipboard!", "Copied!")
+        else:
+            wx.MessageBox("Unable to open the clipboard", "Error")
 
 class TabText(wx.Panel):
     def __init__(self, parent, title, text):

@@ -16,14 +16,13 @@ Literally just clicks away before playing your project.
 * If the project part contains acs library files, this program will compile them all before zipping.
 * Runs your project, with the given settings and outputs the game result once you close the game.
 * Also logs the progress made on the build process if you need to check for errors. (Such as ACS Compilation errors.)
-* For now, supported testing sourceports are Zandronum, GZDoom(?), and ZDaemon(?)
-* Also features a hard-coded function to overrite files with some extra data, but eeeh it's more of a WIP.
+* New string replacer system!, now add dynamic data after each versioning!
 
 #### Why this?
 * For the people who likes to work in their local directory using the file explorer.
 * Allows you to use third party programs directly. (Audacity, Photoshop, Notepad++, Sublime Text, you name it)
 * Smack some git repository in there to save your progress in your project.
-* You like Slade, but you're kind of alergic to the text editor.
+* You like Slade, but you're kind of alergic to the text editor, or, yo find tedious to re-compile every acs file, everytime you make a change.
 
 #### How to use it?
 1. Get the pack-o-daemon.exe, and place it on your root folder. (where the doom project resides)

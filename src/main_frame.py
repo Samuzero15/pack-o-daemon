@@ -1,28 +1,92 @@
 import wx
 import os
-import threading
-import time
 import sys
-import subprocess
-import zipfile
 import datetime
-import source.threads as thread
-import source.funs_n_cons_2 as utils
-import source.projectpart as part
-import source.play_dialog as pd
-import source.result_dialog as rd
-import source.constants as const
+import src.threads as thread
+import src.funs_n_cons_2 as utils
+import src.projectpart as part
+import src.play_dialog as pd
+import src.result_dialog as rd
+import src.config_dialog as cd
+import src.constants as const
 
 import wx.lib.agw.hyperlink as hl
-
-from configparser import ConfigParser
+from wx.adv import Animation, AnimationCtrl, NotificationMessage, TaskBarIcon, wxEVT_TASKBAR_BALLOON_CLICK
 
 #--------------------------------------------------------------#
+
+class MyTaskBarIcon(TaskBarIcon):
+    def __init__(self, frame):
+        TaskBarIcon.__init__(self)
+
+        self.frame = frame
+
+        self.SetIcon(frame.icon, 'Pack-o-Daemon')
+
+        self.Bind(wx.EVT_MENU, self.OnTaskBarActivate, id=1)
+        self.Bind(wx.EVT_MENU, self.OnTaskBarDeactivate, id=2)
+        self.Bind(wx.EVT_MENU, self.frame.OnBuild, id=3)
+        self.Bind(wx.EVT_MENU, self.frame.OnLog, id=4)
+        self.Bind(wx.EVT_MENU, self.frame.OnPlay, id=5)
+        self.Bind(wx.EVT_MENU, self.frame.OnConfig, id=7)
+        self.Bind(wx.EVT_MENU, self.OnTaskBarClose, id=6)
+        
+        for i in range(0, len(const.BUILD_FLAGS)):
+            self.Bind(wx.EVT_MENU, self.OnChangeFlag(i), id=(8+i))
+
+    def CreatePopupMenu(self):
+        menu = wx.Menu()
+        
+        menu_build_flags = wx.Menu()
+        for i in range(0, len(const.BUILD_FLAGS)):
+            menu_build_flags.Append(8+i, const.BUILD_FLAGS[i][0], kind=wx.ITEM_CHECK)
+            menu_build_flags.Check(8+i, self.frame.flags[i].GetValue())
+
+        menu.Append(8, 'Build Flags', menu_build_flags)
+        menu.AppendSeparator()
+        menu.Append(3, 'Build')
+        menu.Append(4, 'Log')
+        menu.Append(5, 'Play')
+        menu.Append(7, 'Settings')
+        menu.AppendSeparator()
+        menu.Append(1, 'Show')
+        menu.Append(2, 'Hide')
+        menu.Append(6, 'Close')
+
+        if not self.frame.builder is None:
+            menu.SetLabel(3, 'Abort')
+            menu.Enable(5, False)
+            menu.Enable(7, False)
+            menu.Enable(8, False)
+
+        if not self.frame.btn_log.IsEnabled():
+            menu.Enable(4, False)
+            menu.SetLabel(4, "No log")
+
+        return menu
+
+    def OnChangeFlag(self, which):
+        def OnClick(event):
+            self.frame.flags[which].SetValue(not self.frame.flags[which].GetValue())
+        return OnClick
+
+    def OnTaskBarClose(self, event):
+        self.frame.Close()
+        self.Destroy()
+
+    def OnTaskBarActivate(self, event):
+        if not self.frame.IsShown():
+            self.frame.Show()
+
+    def OnTaskBarDeactivate(self, event):
+        if self.frame.IsShown():
+            self.frame.Hide()
 
 class Main(wx.Frame):
     def __init__(self):
         
         self.rootdir = os.getcwd();
+        
         self.lastlog = []
         self.builder = None
         self.play_params = [-1,-1,"","",[], [], []]
@@ -31,9 +95,19 @@ class Main(wx.Frame):
         self.snapshot_tag = const.get_snapshot_build_tag()
         self.snapshot_tag_last = self.snapshot_tag
         
+        self.CACOGIF_SPIN = Animation(utils.get_source_img("caco_spin.gif"))
+        self.CACOGIF_FAIL = Animation(utils.get_source_img("caco_fail.gif"))
+        self.CACOGIF_OKAY = Animation(utils.get_source_img("caco_success.gif"))
+        
+        self.icon = wx.Icon(utils.get_source_img("HEADA1.png"), wx.BITMAP_TYPE_ANY)
+        self.taskbar = MyTaskBarIcon(self)
+
+        # self.SetIcon(wx.Icon('./bitmaps/web.png', wx.BITMAP_TYPE_PNG), 'Task bar icon')
+        
+        
         if(len(self.projectparts) == 0):
             msg = "There is no project parts in this project!"
-            dlg = wx.MessageDialog(None, msg, "Missing Project Parts").ShowModal()
+            wx.MessageDialog(None, msg, "Missing Project Parts").ShowModal()
             sys.exit()
             
         wx.Frame.__init__(self, None, title=const.EXENAME, size=(400, 250))
@@ -50,17 +124,18 @@ class Main(wx.Frame):
         self.btn_build = wx.Button(self.panel,label="Build");
         self.btn_play = wx.Button(self.panel,label="Play");
         self.btn_log = wx.Button(self.panel,label="No Log");
+        self.btn_config = wx.Button(self.panel,label="Settings");
         self.btn_log.Disable()
         
         panelSizer = wx.BoxSizer(wx.HORIZONTAL)
         btnsSizer = wx.BoxSizer(wx.VERTICAL)
         checkSizer = wx.BoxSizer(wx.VERTICAL)
-        ctrlsSizer = wx.BoxSizer(wx.VERTICAL)
         linksSizer = wx.BoxSizer(wx.HORIZONTAL)
         
         linksSizer = self._build_links(linksSizer)
         checkSizer = self._build_checkboxes(checkSizer, skip_parts_labels)
         btnsSizer  = self._build_buttons(btnsSizer)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
         
         self.gauge = wx.Gauge(self.panel)
         
@@ -69,8 +144,9 @@ class Main(wx.Frame):
         
         topSizer = wx.BoxSizer(wx.VERTICAL)
         txt_version = wx.StaticText(self.panel, label=const.get_version())
-        cacodemon = wx.StaticBitmap(self, -1, wx.Bitmap(utils.get_source_img("HEADA1.png"), wx.BITMAP_TYPE_ANY))
-        topSizer.Add(cacodemon, 0, wx.ALL | wx.CENTER, 5)
+        self.cacodemon = AnimationCtrl(self.panel, -1, self.CACOGIF_SPIN)
+
+        topSizer.Add(self.cacodemon, 0, wx.ALL | wx.CENTER, 5)
         topSizer.Add(txt_version, 0, wx.ALL | wx.CENTER, 5)
         topSizer.Add(panelSizer, 0, wx.ALL | wx.CENTER, 5)
         topSizer.Add(wx.StaticLine(self.panel), 0, wx.ALL | wx.EXPAND, 5)
@@ -87,17 +163,17 @@ class Main(wx.Frame):
         pyinstaller run.py --onefile -w --name CacoPacker -i "icon.ico" --add-data "icon.ico"
         icon.CopyFromBitmap(wx.Bitmap("icon.ico", wx.BITMAP_TYPE_ANY))
         """
-        self.SetIcon(wx.Icon(utils.get_source_img("HEADA1.png"), wx.BITMAP_TYPE_ANY))
+        self.SetIcon(self.icon)
     
     def _build_links(self, sizer):
         panel2 = wx.Panel(self.panel, -1)
-        hyper1 = hl.HyperLinkCtrl(panel2, -1, "Git Hub", pos=(25,0),
+        hyper1 = hl.HyperLinkCtrl(panel2, -1, "GitHub", pos=(25,0),
                                   URL="https://github.com/Samuzero15/pack-o-daemon")
         hyper1.SetToolTip(wx.ToolTip("The Pack-O-Daemon Git Hub repository!"))
         hyper1.EnableRollover(True)
         
         hyper2 = hl.HyperLinkCtrl(panel2, -1, "Discord", pos=(90,0),
-                                  URL="#")
+                                  URL="https://discord.gg/s3eWNxe")
         hyper2.SetToolTip(wx.ToolTip("Samu's Chambers Discord.\nTalk to the author here too."))
         hyper2.EnableRollover(True)
         
@@ -117,13 +193,23 @@ class Main(wx.Frame):
             self.skip_parts.append(wx.CheckBox(self.panel, label=skip_parts_labels[i]))
             sizer.Add(self.skip_parts[i], 0, wx.ALL, 2)
         
+        build_flags = const.ini_prop("build_flags")
+        for i in range(0, len(const.BUILD_FLAGS)):
+            self.flags.append(wx.CheckBox(self.panel, label=const.BUILD_FLAGS[i][0]))
+            self.flags[i].SetToolTip(wx.ToolTip(const.BUILD_FLAGS[i][1]));
+            self.flags[i].SetValue(build_flags[i])
+            self.flags[i].Hide()
+        
+        """
+        build_flags = const.ini_prop("build_flags")
         sizer.Add(wx.StaticText(self.panel, label="Build Flags"), 0, wx.CENTER, 2)
         for i in range(0, len(const.BUILD_FLAGS)):
             tooltip = wx.ToolTip(const.BUILD_FLAGS[i][1])
             self.flags.append(wx.CheckBox(self.panel, label=const.BUILD_FLAGS[i][0]))
             self.flags[i].SetToolTip(tooltip);
             sizer.Add(self.flags[i], 0, wx.ALL, 2)
-        
+            self.flags[i].SetValue(build_flags[i])
+        """
         return sizer
     
     def _build_buttons(self, sizer):
@@ -131,12 +217,14 @@ class Main(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnBuild, self.btn_build);
         self.Bind(wx.EVT_BUTTON, self.OnPlay, self.btn_play);
         self.Bind(wx.EVT_BUTTON, self.OnLog, self.btn_log);
+        self.Bind(wx.EVT_BUTTON, self.OnConfig, self.btn_config);
         thread.EVT_BUILDRESULT(self,self.OnBuildResult)
         thread.EVT_PLAYRESULT(self,self.OnPlayResult)
         
         sizer.Add(self.btn_build, 1, wx.CENTER, 2)
         sizer.Add(self.btn_log, 1, wx.CENTER, 2)
         sizer.Add(self.btn_play, 1, wx.CENTER, 2)
+        sizer.Add(self.btn_config, 1, wx.CENTER, 2)
     
         return sizer
     
@@ -177,7 +265,20 @@ class Main(wx.Frame):
         self.sb.SetStatusText(msg)
         self.log.append( "["+ time.strftime('%H:%M:%S') +']'+'-'*order + ">  " + msg);
     
+    def OnConfig(self, e):
+
+        config = cd.ConfigDialog(self)
+        config.ShowModal()
+        values = config.GetBuildFlags()
+
+        for i in range(0,len(self.flags)):
+            self.flags[i].SetValue(values[i].GetValue())
+        
+        
+    
     def OnBuild(self, e):
+        self.cacodemon.SetAnimation(self.CACOGIF_SPIN)
+        self.cacodemon.Play()
         if self.builder is None:
             if self.flags[1].GetValue() and self.flags[4].GetValue():
                 self.snapshot_tag_last = self.snapshot_tag
@@ -218,6 +319,14 @@ class Main(wx.Frame):
         
         completed = sucess == thread.BUILD_SUCCESS
         failure = sucess == thread.BUILD_CANCELED or sucess == thread.BUILD_ERROR
+
+        if completed:
+            self.cacodemon.SetAnimation(self.CACOGIF_OKAY)
+            self.cacodemon.Play()
+        
+        if failure:
+            self.cacodemon.SetAnimation(self.CACOGIF_FAIL)
+            self.cacodemon.Play()
         
         nopart = []
         skip_a_part = False;
@@ -229,15 +338,25 @@ class Main(wx.Frame):
         
         result = ""
         title = ""
+        notif_title = ""
+        notif = NotificationMessage()
+        notif.SetFlags(wx.ICON_INFORMATION)
+        notif.UseTaskBarIcon(self.taskbar)
+        
         if(not skip_a_part and not (noacs or versioned or packed or play_it)): 
-            if completed: title = "Full build completed."
+            if completed: 
+                title = "Full build completed."
+                notif.SetTitle("Full build completed.")
             elif failure: 
                 title = "Full build interrupted."
+                notif.SetTitle("Full build interrupted.")
         else: 
             if(completed): 
                 title = "Build completed with the following flags."
+                notif.SetTitle("Build completed!")
             elif failure: 
                 title = "Build interrupted with the following flags."
+                notif.SetTitle("Build Interrupted!")
             for part in self.projectparts:
                 if part.skip:
                     title += "\n -) " + part.name + " part skipped."
@@ -246,8 +365,8 @@ class Main(wx.Frame):
         if(versioned):  title += "\n -) Tagged to the respective versions.";
         if(packed):
             zipfilename = ""
-            zip_name = const.ini_prop('zip_name', 'project')
-            zip_tag =  const.ini_prop('zip_tag', 'v0')
+            zip_name = const.ini_prop('name', 'project')
+            zip_tag =  const.ini_prop('tag', 'v0')
             if(versioned): 
                 if(snapshot):
                     zipfilename = zip_name + "_" + self.snapshot_tag;
@@ -260,6 +379,9 @@ class Main(wx.Frame):
         if(play_it): title += "\n -) The project will run once you close this window."
         
         title += "\nRead the log for more details."
+
+        notif.SetMessage("Check all the details in the log.")
+        notif.Show(timeout=NotificationMessage.Timeout_Auto)
         
         result += "\n------------------------------------------------------------"
         result += "\n\t==== Log Start ===="
@@ -309,9 +431,10 @@ class Main(wx.Frame):
         
         
         # And to top it off, do a dialog!
-        dialog = rd.ResultDialog(self, result[0], result[1]).ShowModal()
         self.lastlog = [result[0], result[1]]
         self.builder = None
+        if (not self.flags[5].GetValue()):
+            rd.ResultDialog(self, result[0], result[1]).ShowModal()
         if (self.flags[3].GetValue() and sucess == thread.BUILD_SUCCESS):
             self.PlayNow(event)
         
@@ -321,7 +444,9 @@ class Main(wx.Frame):
         self.btn_log.SetLabel("Log")
         header = "The game closed \nHere it is the following output."
         self.lastlog = [header, event.data]
-        dialog = rd.ResultDialog(self, header, event.data).ShowModal()
+        
+        if (not self.flags[6].GetValue()):
+            rd.ResultDialog(self, header, event.data).ShowModal()
     
     def ACSErrorOutput(self, output):
         self.response = -1
@@ -337,9 +462,18 @@ class Main(wx.Frame):
     
     def OnPlay(self, e):
         dialog = pd.PlayDialog(self, self.play_params)
-        dialog.ShowModal()
+        if not self.flags[7].GetValue(): dialog.ShowModal()
+        else :                           dialog.OnPlay(e)
         self.play_params = dialog.GetCurrentSets()
         # saves the temporary settings while you're on the program. (Not saved to the ini)
     
     def OnLog(self, e):
         rd.ResultDialog(self, self.lastlog[0], self.lastlog[1]).ShowModal()
+
+    def OnClose(self, event):
+        self.taskbar.Destroy()
+        self.Destroy()
+    
+    def OnShowMeUp(self, event):
+        if not self.IsShown():
+            self.Show()

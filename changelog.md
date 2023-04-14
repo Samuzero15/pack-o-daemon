@@ -1,5 +1,20 @@
 # Packodaemon Changelog
 
+## v1.5.0 [JSon conversion, and some extra stuff]
+	* Now from ini files, to json files. For an easier access.
+	* Now you must specify the sourceport executeable path and also the pwad to be used in the play dialog.
+	* Added some little icons.
+	* New string replacer! Replace strings when building your project!
+	* Now you can copy to clipboard the log output!
+	* Now, the cacodemon is now trasparent1!1, PEAK CHANGE OMG
+	* The cacodemon now speeens, and cries and laughs when the build fails or succeds.
+	* Now, BCC is now supported! (or at least this version: https://github.com/zeta-group/zt-bcc)
+	* Now, the cacodemon can be hidden and shown in the new Taskbar! Control the pack-o-daemon in a minimalistic way :D
+	* Extra flags! for skipping Logs after a build or after a play operations, and a quick-play flag!
+	* Now, add some extra files after zipping your mod!
+	* A new settings dialog! Edit your json easy!
+	* Some bug fixes too
+
 ## v1.4.3 [Reordering repository]
 	* Reordering the files, separating the soruce from the python env files. (In order to make the repository setup easier and constant)
 	* Updating Readme.md

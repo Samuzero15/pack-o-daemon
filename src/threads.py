@@ -4,12 +4,10 @@ import os
 import threading
 import subprocess
 import time
-import source.funs_n_cons_2 as utils
-import source.result_dialog as rd
+import src.funs_n_cons_2 as utils
+import src.result_dialog as rd
 import zipfile
-import source.constants as const
-
-from configparser import ConfigParser
+import src.constants as const
 
 # Define notification event for thread completion
 EVT_BUILDRESULT_ID = wx.NewId()
@@ -59,6 +57,7 @@ class BuildProject(threading.Thread):
         # Make sure you're on the working directory where you will start the build.
         rootdir = self.ui.rootdir
         # print("Root dir: " + rootdir)
+        #print("My root dir is: " + rootdir)
         os.chdir(rootdir)
         
         parts = self.ui.projectparts
@@ -87,12 +86,13 @@ class BuildProject(threading.Thread):
         # Files are built, now, we should pack them if flagged to do so.
         
         if packed:
-            config = ConfigParser()
-            config.read("project.ini")
+            
             os.chdir(rootdir)
             
             distDir  = const.ini_prop('zip_dir',  'dist\packed');
-            filename = const.ini_prop('zip_name', 'project');
+            filename = const.ini_prop('name', 'project');
+
+            distDir = os.path.join(const.ini_prop('build_dir',  rootdir), distDir)
             
             if not os.path.exists(distDir):
                 os.mkdir(distDir)
@@ -100,7 +100,7 @@ class BuildProject(threading.Thread):
                     
             if versioned: 
                 if snapshot : filename += "_" + self.ui.snapshot_tag + '.zip'
-                else        : filename += "_" + const.ini_prop('zip_tag','v0') + '.zip'
+                else        : filename += "_" + const.ini_prop('tag','v0') + '.zip'
             else        : filename += "_" + "DEV" + '.zip'
             
             
@@ -146,13 +146,13 @@ class PlayProject(threading.Thread):
 
     def run(self):
         
-        exe_path = const.ini_prop(self.sourceport + '_path', '?');
-        
-        exe_path = utils.relativePath(exe_path)
+        exe_path = os.path.dirname(utils.relativePath(self.sourceport))
+        iwad_path = utils.relativePath(self.iwad)
+        sourceport_path = utils.relativePath(self.sourceport)
         
         if exe_path == '?' or not os.path.isdir(exe_path): 
-            msg = "Could'nt find " + self.sourceport + ".exe"
-            msg += "\nCheck the path in the project.ini, override "+ self.sourceport + "_path, and try again."
+            msg = "Could'nt find " + self.sourceport
+            msg += "\nCheck the path in the "+const.PROJECT_FILE+", override sourceport_path, and try again."
             dlg = wx.MessageDialog(self.ui, msg, "Running error").ShowModal()
             return
         
@@ -163,12 +163,13 @@ class PlayProject(threading.Thread):
             pwadlist.extend(["-file"] + [os.path.join(pwad[1], pwad[0])])
             # -stdout
         
-        fullcmd     = [self.sourceport + ".exe", "-iwad", self.iwad, '+map', self.test_map] + pwadlist + self.ex_params.split() + ["-stdout"]
+        fullcmd     = [sourceport_path, "-iwad", iwad_path, '+map', self.test_map] + pwadlist + self.ex_params.split() + ["-stdout"]
         
         """
         fullcmd     = ["zandronum.exe", "-iwad", "doom2.wad" , "-file", std_path]
         subprocess.call(fullcmd+ filelist + ['+map', map_test])
         """
+        # print(fullcmd)
         p = subprocess.Popen(fullcmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
         out, err = p.communicate()
             

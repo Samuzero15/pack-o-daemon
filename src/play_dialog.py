@@ -1,3 +1,4 @@
+import json
 import wx
 import os
 import threading
@@ -5,10 +6,10 @@ import time
 import sys
 import subprocess
 import zipfile
-import source.threads as thread
-import source.funs_n_cons_2 as utils
-import source.projectpart as part
-import source.constants as const
+import src.threads as thread
+import src.funs_n_cons_2 as utils
+import src.projectpart as part
+import src.constants as const
 
 from configparser import ConfigParser
 
@@ -17,37 +18,46 @@ class PlayDialog(wx.Dialog):
         wx.Dialog.__init__(self, parent, title="Play Project", size=(300, 200))
         self.parent = parent
         self.project_pwads = self.SetUpPwads(parent, play_params[4])
-        pwad_choices = [
-        "doom2.wad",
-        "doom.wad",
-        "heretic.wad",
-        "hexen.wad",
-        "strife1.wad",
-        "chex3.wad",
-        "freedoom1.wad",
-        "freedoom2.wad"
-        ]
-        
-        sourceport_choices = [
-        "Zandronum", 
-        "GZDoom", 
-        "ZDaemon"
-        ]
         
         panel =             wx.Panel(self);
         btn_play =               wx.Button(panel, label="Play Project")
         btn_save =               wx.Button(panel, label="Save Settings")
         self.txt_ctrl_map =      wx.TextCtrl(panel)
         self.txt_ctrl_params =   wx.TextCtrl(panel)
+        """
         self.list_sourceports   =  wx.ComboBox(panel, style=wx.CB_READONLY, choices=sourceport_choices)
         self.list_iwads         =  wx.ComboBox(panel, style=wx.CB_READONLY, choices=pwad_choices)
-        self.list_pwads         = wx.ListCtrl(panel, style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
-        self.btn_add_pwad            = wx.Button(panel, label="Add")
-        self.btn_remove_pwad         = wx.Button(panel, label="Remove")
-        self.btn_clear_pwads         = wx.Button(panel, label="Clear")
-        self.btn_raise_pwad          = wx.Button(panel, label="Raise")
-        self.btn_lower_pwad          = wx.Button(panel, label="Lower")
+        """
+
+        self.txt_sourceport =   wx.TextCtrl(panel)
+        self.btn_sourceport =   wx.Button(panel)
+        self.txt_iwad =         wx.TextCtrl(panel)
+        self.btn_iwad =         wx.Button(panel)
         
+        self.list_pwads         = wx.ListCtrl(panel, style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
+
+        self.btn_add_pwad            = wx.Button(panel)
+        self.btn_remove_pwad         = wx.Button(panel)
+        self.btn_clear_pwads         = wx.Button(panel)
+        self.btn_raise_pwad          = wx.Button(panel)
+        self.btn_lower_pwad          = wx.Button(panel)
+
+        self.btn_add_pwad.SetToolTip("Add Pwad")
+        self.btn_remove_pwad.SetToolTip("Remove Pwad")
+        self.btn_clear_pwads.SetToolTip("Clear all Pwads")
+        self.btn_raise_pwad.SetToolTip("Raise Pwad")
+        self.btn_lower_pwad.SetToolTip("Lower Pwad")
+        self.btn_sourceport.SetToolTip("Explore")
+        self.btn_iwad.SetToolTip("Explore")
+
+        self.btn_iwad.SetBitmap(wx.Bitmap(utils.get_source_img("explore.png")))
+        self.btn_sourceport.SetBitmap(wx.Bitmap(utils.get_source_img("explore.png")))
+        self.btn_add_pwad.SetBitmap(wx.Bitmap(utils.get_source_img("pwad_add.png")))
+        self.btn_remove_pwad.SetBitmap(wx.Bitmap(utils.get_source_img("pwad_remove.png")))
+        self.btn_clear_pwads.SetBitmap(wx.Bitmap(utils.get_source_img("pwad_clear.png")))
+        self.btn_raise_pwad.SetBitmap(wx.Bitmap(utils.get_source_img("pwad_up.png")))
+        self.btn_lower_pwad.SetBitmap(wx.Bitmap(utils.get_source_img("pwad_down.png")))
+
         self.list_pwads.AppendColumn("Name")
         self.list_pwads.AppendColumn("Directory", width=200)
         
@@ -58,20 +68,31 @@ class PlayDialog(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self.OnClearPwads, self.btn_clear_pwads)
         self.Bind(wx.EVT_BUTTON, self.OnRaisePwad,  self.btn_raise_pwad)
         self.Bind(wx.EVT_BUTTON, self.OnLowerPwad,  self.btn_lower_pwad)
+        self.Bind(wx.EVT_BUTTON, self.OnExploreSourceport,    self.btn_sourceport)
+        self.Bind(wx.EVT_BUTTON, self.OnExploreIwad,    self.btn_iwad)
         
         gsizer_form     = wx.GridSizer(3, 2, 5, 5)
         pwad_btn_sz     = wx.BoxSizer(wx.VERTICAL)
         pwads_sizer     = wx.BoxSizer(wx.HORIZONTAL)
+        sourceport_sizer     = wx.BoxSizer(wx.HORIZONTAL)
+        iwad_sizer      = wx.BoxSizer(wx.HORIZONTAL)
         param_sizer     = wx.BoxSizer(wx.VERTICAL)
         ctrls           = wx.BoxSizer(wx.VERTICAL)
         ctrls2          = wx.BoxSizer(wx.HORIZONTAL)
         cont            = wx.BoxSizer(wx.VERTICAL)
         
-        gsizer_form_flags = wx.ALL | wx.CENTER | wx.EXPAND
+        gsizer_form_flags = wx.ALL | wx.CENTER | wx.EXPAND 
         
-        self.AddFormInput( gsizer_form, panel, "Sourceport:",       self.list_sourceports)
-        self.AddFormInput( gsizer_form, panel, "IWad to use:",      self.list_iwads)
-        self.AddFormInput( gsizer_form, panel, "Map to play:",      self.txt_ctrl_map)
+        # self.AddFormInput( gsizer_form, panel, "Sourceport:",       self.list_sourceports)
+        # self.AddFormInput( gsizer_form, panel, "IWad to use:",      self.list_iwads)
+        
+        sourceport_sizer.Add(self.txt_sourceport, 3, wx.LEFT | wx.RIGHT)
+        sourceport_sizer.Add(self.btn_sourceport, 1, wx.LEFT | wx.RIGHT)
+        iwad_sizer.Add(self.txt_iwad, 3, wx.LEFT | wx.RIGHT)
+        iwad_sizer.Add(self.btn_iwad, 1, wx.LEFT | wx.RIGHT)
+        self.AddFormInput( param_sizer, panel, "Sourceport:",       sourceport_sizer)
+        self.AddFormInput( param_sizer, panel, "IWad:",             iwad_sizer)
+        self.AddFormInput( param_sizer, panel, "Map to play:",      self.txt_ctrl_map)
         self.AddFormInput( param_sizer, panel, "Extra parameters:", self.txt_ctrl_params)
         pwads_sizer.Add (self.list_pwads, 0, gsizer_form_flags)
         pwad_btn_sz.Add (self.btn_add_pwad, 0, gsizer_form_flags, 2)
@@ -81,7 +102,6 @@ class PlayDialog(wx.Dialog):
         pwad_btn_sz.Add (self.btn_lower_pwad, 0, gsizer_form_flags, 2)
         pwads_sizer.Add (pwad_btn_sz, 0, wx.CENTER, 5)
         
-        ctrls.Add(gsizer_form, 0, wx.CENTER, 5)
         ctrls.Add(param_sizer, 0, gsizer_form_flags, 5)
         ctrls.Add(wx.StaticLine(panel), 0, gsizer_form_flags, 5);
         ctrls.Add(pwads_sizer, 0, gsizer_form_flags, 5)
@@ -108,16 +128,16 @@ class PlayDialog(wx.Dialog):
         snapshot_tag_last = parent.snapshot_tag_last
         
         # Read the INI file, and get the required pwads.
-        pwads_before_ini = const.ini_prop('play_pwads_before')
+        pwads_before_json = const.ini_prop('pwads_before', section="play_settings")
         pwads_before = []
-        for path in pwads_before_ini:
+        for path in pwads_before_json:
             filepath = utils.relativePath(path)
             if os.path.isfile(filepath):
                 pwads_before.append(filepath)
         
-        pwads_after_ini = const.ini_prop('play_pwads_after')
+        pwads_after_json = const.ini_prop('pwads_after', section="play_settings")
         pwads_after = []
-        for path in pwads_after_ini:
+        for path in pwads_after_json:
             filepath = utils.relativePath(path)
             if os.path.isfile(filepath):
                 pwads_after.append(filepath)
@@ -161,26 +181,28 @@ class PlayDialog(wx.Dialog):
         return pwad_list
     
     def LoadDefaultValues(self, play_params):
+
         # Load the selected sourceport.
         if play_params[0] != -1: 
-            self.list_sourceports.SetSelection      (play_params[0])
+            self.txt_sourceport.SetValue      (play_params[0])
         else:
-            self.list_sourceports.SetSelection      (const.ini_prop('play_sourceport', 0))
+            self.txt_sourceport.SetValue      (const.ini_prop('sourceport_path', section="play_settings"))
         # Load the selected iwad
         if play_params[1] != -1: 
-            self.list_iwads.SetSelection            (play_params[1])
+            self.txt_iwad.SetValue            (play_params[1])
         else:
-            self.list_iwads.SetSelection            (const.ini_prop('play_iwad', 0))
+            self.txt_iwad.SetValue            (const.ini_prop('iwad_path', section="play_settings"))
+        
         # Load the specified map
         if len(play_params[2]) != 0: 
             self.txt_ctrl_map.SetValue              (play_params[2])
         else:
-            self.txt_ctrl_map.SetValue              (const.ini_prop('play_map'))
+            self.txt_ctrl_map.SetValue              (const.ini_prop('map', section="play_settings"))
         # Load the extra parameters
         if len(play_params[3]) != 0: 
             self.txt_ctrl_params.SetValue           (play_params[3])
         else:
-            self.txt_ctrl_params.SetValue           (const.ini_prop('play_extraparams'))
+            self.txt_ctrl_params.SetValue           (const.ini_prop('extra_params', section="play_settings"))
         # And load the pwads.
         if len(play_params[4]) != 0: 
             self.project_pwads = play_params[4]
@@ -194,46 +216,44 @@ class PlayDialog(wx.Dialog):
     def OnPlay(self, event): 
         # Simply saves the temporary settings, and runs the play thread.
         if self.IsValidInput():
-            sourceport  = self.list_sourceports.GetStringSelection()
-            iwad        = self.list_iwads.GetStringSelection()
+
+            sourceport  = self.txt_sourceport.GetValue()
+            iwad        = self.txt_iwad.GetValue()
             test_map    = self.txt_ctrl_map.GetValue()
             ex_params   = self.txt_ctrl_params.GetValue()
             pwads       = self.GetPWADList()
             
             self.parent.play_params = []
-            
-            self.parent.play_params.append(self.list_sourceports.GetSelection())
-            self.parent.play_params.append(self.list_iwads.GetSelection())
+            self.parent.play_params.append(sourceport)
+            self.parent.play_params.append(iwad)
             self.parent.play_params.append(test_map)
             self.parent.play_params.append(ex_params)
             self.parent.play_params.append(pwads)
             
-            thread.PlayProject(self.parent, sourceport,  iwad, test_map, ex_params, pwads)
+            thread.PlayProject(self.parent, sourceport, iwad, test_map, ex_params, pwads)
             self.Close()
         else:
             msg = "Specify a sourceport and IWAD!"
             dlg = wx.MessageDialog(self.parent, msg, "Hold-up!").ShowModal()
     
     def OnSaveSets(self, event):
-        config = ConfigParser()
-        config.read("project.ini")
-        
-        section = "Project"
-        config.set(section, "play_sourceport",   str(self.list_sourceports.GetSelection()))
-        config.set(section, "play_iwad",         str(self.list_iwads.GetSelection()))
-        config.set(section, "play_map",          self.txt_ctrl_map.GetValue())
-        config.set(section, "play_extraparams",  self.txt_ctrl_params.GetValue())
-        
-        
-        with open("project.ini", 'w') as configfile:
-            config.write(configfile)
-        
-        msg = "The current play settings are saved in the project.ini file."
-        dlg = wx.MessageDialog(self.parent, msg, "Settings saved!").ShowModal()
+        with open(const.PROJECT_FILE, "r+") as jsonFile:
+            data = json.load(jsonFile)
+
+            data["play_settings"]["sourceport_path"] = self.txt_sourceport.GetValue()
+            data["play_settings"]["iwad_path"] = self.txt_iwad.GetValue()
+            data["play_settings"]["map"] = self.txt_ctrl_map.GetValue()
+            data["play_settings"]["extra_params"] = self.txt_ctrl_params.GetValue()
+
+            jsonFile.seek(0)  # rewind
+            json.dump(data, jsonFile, indent=4)
+            jsonFile.truncate()
+        msg = "The current play settings are saved in the "+const.PROJECT_FILE+" file."
+        wx.MessageDialog(self.parent, msg, "Settings saved!").ShowModal()        
        
     def GetCurrentSets(self):
-        return [self.list_sourceports.GetSelection(), 
-        self.list_iwads.GetSelection(), 
+        return [self.txt_sourceport.GetValue(),
+        self.txt_iwad.GetValue(),
         self.txt_ctrl_map.GetValue(),  
         self.txt_ctrl_params.GetValue(), 
         self.project_pwads]
@@ -281,7 +301,6 @@ class PlayDialog(wx.Dialog):
     def OnAddPwad(self, event):
         # Ask for a file, and add it to the file list
         filename = ""
-        directory = ""
         wildcards = "WAD/PK3/PK7 files (*.wad;*.pk3;*.pk7)|*.wad;*.pk3;*.pk7"
         dialog = wx.FileDialog(self, "Choose a PWAD", self.dirname, "", wildcards, wx.FD_OPEN)
         if dialog.ShowModal() == wx.ID_OK:
@@ -291,6 +310,30 @@ class PlayDialog(wx.Dialog):
                 self.list_pwads.Append([filename, self.dirname])
         dialog.Destroy();
         self.UpdatePWADButtons()
+    
+    def OnExploreIwad(self, event):
+        # Ask for a file, and add it to the file list
+        filename = ""
+        wildcards = "WAD file (*.wad;)|*.wad"
+        dialog = wx.FileDialog(self, "Choose a IWAD", self.dirname, "", wildcards, wx.FD_OPEN)
+        if dialog.ShowModal() == wx.ID_OK:
+            filename = dialog.GetFilename();
+            self.dirname = dialog.GetDirectory();
+            if len(filename) != 0: 
+                self.txt_iwad.SetValue(self.dirname + os.path.sep + filename)
+        dialog.Destroy();
+    
+    def OnExploreSourceport(self, event):
+        # Ask for a file, and add it to the file list
+        filename = ""
+        wildcards = "Executeable file (*.exe)|*.exe"
+        dialog = wx.FileDialog(self, "Choose a Sourceport", self.dirname, "", wildcards, wx.FD_OPEN)
+        if dialog.ShowModal() == wx.ID_OK:
+            filename = dialog.GetFilename();
+            self.dirname = dialog.GetDirectory();
+            if len(filename) != 0: 
+                self.txt_sourceport.SetValue(self.dirname + os.path.sep + filename)
+        dialog.Destroy();
     
     def OnRemovePwad(self, event):
         # If you have something selected, delete it.
@@ -351,4 +394,5 @@ class PlayDialog(wx.Dialog):
             
     
     def IsValidInput(self):
-        return  self.list_sourceports.GetSelection() != wx.NOT_FOUND and self.list_iwads.GetSelection() != wx.NOT_FOUND;
+        sourceport_path = utils.relativePath(self.txt_sourceport.GetValue())
+        return os.path.isdir(os.path.dirname(sourceport_path))
