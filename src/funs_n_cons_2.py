@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import sys
 import threading
+import traceback
 import zipfile
 import datetime
 import subprocess
@@ -73,8 +74,6 @@ def makepkg(builder, sourcePath, destPath, notxt=False, skipVariableTexts=False)
             path2file = os.path.join(relativePath(file))
             dirName = os.path.dirname(path2file)
             file_to_copy = os.path.basename(path2file)
-            print(dirName)
-            print(file_to_copy)
             os.chdir(dirName)
             distzip.write(file_to_copy)
             printProgress (builder, current, len(additional_files), 'Zipped: ', 'files. (' + file + ')')
@@ -174,12 +173,13 @@ def maketxt(builder, sourcePath, destPath, version, filetemplate):
                 try:
                     file_to_copy = open (relativePath(value["content"]), "rt")
                     content = file_to_copy.read()
-                    if value["language_format"]:
-                        content = format_to_language_string (content)
+                    if value["oneline"] is not None and value["oneline"] == True:
+                        content = format_singleline (content)
                     line = line.replace(key, content)
                     file_to_copy.close()
-                except:
-                    pass
+                except Exception as e:
+                    dlg = wx.MessageDialog(None, "Something went wrong!\n" +"\n"+ traceback.format_exc(), "Ah shiet!").ShowModal()
+                    
             elif value["type"] == "date":
                 line = line.replace(key, datetime.datetime.now().strftime(value["content"]))
             else:
@@ -193,12 +193,12 @@ def maketxt(builder, sourcePath, destPath, version, filetemplate):
     
     return 0 + -1*aborted
 
-# Writes the changes to the lines and yeeah, thats it.
-def format_to_language_string (textfile):
+# Reformat the string up to one line., thats it.
+def format_singleline (textfile):
     strchanges = ""
     # color = True
     for line in textfile:
-        if (line.endswith("\n")): line = line.replace("\n", "#")
+        if (line.endswith("\n")): line = line.replace("\n", "\\n")
         strchanges += line
 
     return strchanges

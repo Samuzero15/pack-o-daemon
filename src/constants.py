@@ -11,7 +11,7 @@ from random import randint
 
 PROJECT_FILE = "project.json"
 
-VERSION = (1, 5, 0)
+VERSION = (1, 5, 1)
 EXENAME = "Pack-o-daemon"
 
 BUILD_FLAGS = [
@@ -55,21 +55,21 @@ def make_default_json():
         },
         "play_settings" : {
             "sourceport_path" : "",
-            "wads_before" : "",
-            "wads_after" : "",
-            "iwad" : "",
+            "pwads_before" : [],
+            "pwads_after" : [],
+            "iwad_path" : "",
             "map" : "MAP01",
             "extra_params" : ""
         }, 
         "build_settings" : {
             "name" : "my_project",
             "tag" : "v0",
+            "zip_dir":   "dist\packed",
+            "zip_compress_type": "",
             "build_skip_files" : [ ".backup1", ".backup2", ".backup3", ".bak", ".dbs"],
             "build_dir" : "",
             "build_add_files" : [],
             "build_flags": flag_default_values,
-            "zip_dir":   "dist\packed",
-            "zip_compress_type": "",
             "string_replacer" : {
                 "files_to_replace" : [
                     "Language.txt", 
@@ -80,15 +80,18 @@ def make_default_json():
                 "strings_to_replace": {
                     "_DEV_": {
                         "type": "tag",
-                        "content": ""
+                        "content": "",
+                        "oneline": False
                     },
                     "_FILE_": {
                         "type": "file",
-                        "content": "..\\path\\to\\file.txt"
+                        "content": "..\\path\\to\\file.txt",
+                        "oneline": False
                     },
                     "XX/XX/XXXX": {
                         "type": "date",
-                        "content": "%d/%m/%Y"
+                        "content": "%d/%m/%Y",
+                        "oneline": False
                     }
                 }
             }

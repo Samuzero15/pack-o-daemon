@@ -5,3 +5,4 @@ pefile
 Pillow
 six
 wxPython
+pyinstaller

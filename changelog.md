@@ -1,5 +1,12 @@
 # Packodaemon Changelog
 
+## v1.5.1 [Smol bugfix]
+	* Changed the default project file generated for the first time use
+	* Added the oneline format for the string replacers!
+	* Fixed up some buggy bugs
+	* Now you dont really need to take resets for each edits on the config dialog, the changes are now instant-ish.
+	* If you need a version for your os, you gotta build it yourself. i guess. oof.
+
 ## v1.5.0 [JSon conversion, and some extra stuff]
 	* Now from ini files, to json files. For an easier access.
 	* Now you must specify the sourceport executeable path and also the pwad to be used in the play dialog.

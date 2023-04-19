@@ -45,8 +45,13 @@ If you change something from the project.ini file, and you have the executable r
 5. Use the command ```.\env\scripts\activate```, and check if "(env)" is right next to the command prompt line.
 6. Now get the requirements installed with ```pip install -r requirements.txt```
 7. And you're ready to go, it depends on what you want to do.
-	> * To run it, do step 5 if env is not activated, and then ```run.py```
-	> * To build it, use the make.bat file in windows. Sadly I dont know how to install it on any linux distribution, or in MAC-OS derivated systems. (A bit of help on this part plz)
+	> * To run it, do step 5 if env is not activated, and then ```python run.py```
+
+	> * To build it execute this line using pyinstaller.
+		```"pyinstaller" run.py -w --onefile --name pack-o-daemon -i "icon.ico" --add-data "src/*.*;src" --add-data "src/imgs/*.*;src/imgs" --add-data "changelog.md;."``` 
+		* Depending on your python build (on the virtual enviroment too), the output file will be 64 bits or 32 bits.
+		* Depending on what OS you execute this, might output to Windows, Linux or Mac.
+
 
 You can use any text editor if you wish.
 

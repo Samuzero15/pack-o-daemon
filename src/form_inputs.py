@@ -208,16 +208,17 @@ class InputListFile():
         return (self.json_entry, self.items)
 
 class StringReplacerEntry():
-    def __init__(self, string, type, content):
+    def __init__(self, string, type, content, oneline):
         self.string = string
         self.type = type
         self.content = content
+        self.oneline = oneline
     
     def toArray(self):
-        return [self.string, self.type, self.content]
+        return [self.string, self.type, self.content, self.oneline]
     
     def toJSON(self):
-        return (self.string, { "type" : self.type, "content": self.content})
+        return (self.string, { "type" : self.type, "content": self.content, "oneline": self.oneline})
 
 class InputList_StringReplacer():
     def __init__(self, panel, _label, items=[]):
@@ -235,6 +236,9 @@ class InputList_StringReplacer():
         self.list.InsertColumn(0, "String")
         self.list.InsertColumn(1, "Replace Type")
         self.list.InsertColumn(2, "Replace Content")
+        self.list.InsertColumn(3, "Format to 1 line?")
+
+        self.list.SetColumnWidth(2, 150)
 
         for i in range(0, len(self.items)):
             self.list.Append(self.items[i].toArray())
@@ -246,27 +250,39 @@ class InputList_StringReplacer():
         self.btn_remove.SetBitmap(wx.Bitmap(utils.get_source_img("pwad_remove.png")))
         self.btn_remove.SetToolTip("Remove")
 
-        gs = wx.GridSizer(2, 3, 5)
+        sc = wx.BoxSizer(wx.VERTICAL)
+        sl = wx.BoxSizer(wx.VERTICAL)
+        sf = wx.BoxSizer(wx.HORIZONTAL)
 
         self.string = wx.TextCtrl(panel)
         self.type = wx.ComboBox(panel, choices=["label", "tag", "file" ,"date"],style=wx.CB_READONLY|wx.CB_DROPDOWN)
         self.content = wx.TextCtrl(panel)
+        self.oneline = wx.CheckBox(panel)
+        self.oneline.SetToolTip("This works only for file types.")
 
-        gs.AddMany([(wx.StaticText(panel, label="String"), 0, wx.EXPAND | wx.CENTER), 
-                    (self.string, 0, wx.EXPAND),
-                    (wx.StaticText(panel, label="Type"), 0, wx.EXPAND | wx.CENTER), 
-                    (self.type, 0, wx.EXPAND),
-                    (wx.StaticText(panel, label="Content"), 0, wx.EXPAND | wx.CENTER), 
-                    (self.content, 0, wx.EXPAND)])
+        sl.AddMany([(wx.StaticText(panel, label="String"), 0, wx.BOTTOM , 10), 
+                    (wx.StaticText(panel, label="Type"), 0,wx.TOP | wx.BOTTOM, 8), 
+                    (wx.StaticText(panel, label="Content"),0, wx.TOP | wx.BOTTOM , 8), 
+                    (wx.StaticText(panel, label="Inline Format?"), 0, wx.TOP , 10)])
+        
+        sc.AddMany([(self.string, 0,  wx.ALL | wx.EXPAND, 5),
+                    (self.type, 0,  wx.ALL | wx.EXPAND, 5),
+                    (self.content, 0, wx.ALL | wx.EXPAND, 5),
+                    (self.oneline, 0,  wx.ALL | wx.EXPAND, 5)])
+
+
+        sf.Add(sl, 1, wx.LEFT | wx.TOP, 5)
+        sf.Add(sc, 3, wx.ALL | wx.EXPAND, 0)
 
         hori_sizer.Add(self.btn_add,1,wx.ALL | wx.EXPAND)
         hori_sizer.Add(self.btn_save,1,wx.ALL | wx.EXPAND)
         hori_sizer.Add(self.btn_remove,1,wx.ALL | wx.EXPAND)
 
         self.sizer.Add(self.label,0,wx.ALL | wx.EXPAND)
-        self.sizer.Add(self.list, 2, wx.ALL | wx.EXPAND)
+        self.sizer.Add(self.list, 1, wx.ALL | wx.EXPAND)
         self.sizer.Add(hori_sizer,0,wx.ALL | wx.EXPAND)
-        self.sizer.Add(gs,1,wx.ALL | wx.EXPAND)
+        self.sizer.Add(wx.StaticText(panel, label="Double click to a list element to copy the properties."), 0, wx.ALL | wx.EXPAND)
+        self.sizer.Add(sf,0, wx.CENTER | wx.ALL, 10)
 
         panel.Bind(wx.EVT_BUTTON, self.OnAdd, self.btn_add)
         panel.Bind(wx.EVT_BUTTON, self.OnSave, self.btn_save)
@@ -282,26 +298,29 @@ class InputList_StringReplacer():
         return (self.json_entry, json_stuff)
 
     def OnAdd(self, e):
-        data = [self.string.GetValue(), self.type.GetValue(), self.content.GetValue()]
+        data = [self.string.GetValue(), self.type.GetValue(), self.content.GetValue(), self.oneline.GetValue()]
         if len(data[0]) != 0:
             self.list.Append(data)
-            self.items.append(StringReplacerEntry(data[0], data[1], data[2]))
+            self.items.append(StringReplacerEntry(data[0], data[1], data[2], data[3]))
             self.string.SetValue("")
             self.type.SetValue("")
             self.content.SetValue("")
+            self.oneline.SetValue(False)
 
     def OnSave(self, e):
-        data = [self.string.GetValue(), self.type.GetValue(), self.content.GetValue()]
+        data = [self.string.GetValue(), self.type.GetValue(), self.content.GetValue(), "True" if self.oneline.GetValue() else "False"]
         selected = self.list.GetFirstSelected()
         if len(data[0]) != 0 and selected != -1:
             selected = self.list.GetFirstSelected()
-            self.items[selected] = data
+            self.items[selected] = StringReplacerEntry(data[0], data[1], data[2], data[3] == "True")
             self.list.SetItem(selected, 0, data[0])
             self.list.SetItem(selected, 1, data[1])
             self.list.SetItem(selected, 2, data[2])
+            self.list.SetItem(selected, 3, data[3])
             self.string.SetValue("")
             self.type.SetValue("")
             self.content.SetValue("")
+            self.oneline.SetValue(False)
 
     def OnEdit(self, e):
         selected = self.list.GetFirstSelected()
@@ -309,6 +328,7 @@ class InputList_StringReplacer():
             self.string.SetValue(self.list.GetItem(selected, 0).GetText())
             self.type.SetValue(self.list.GetItem(selected, 1).GetText())
             self.content.SetValue(self.list.GetItem(selected, 2).GetText())
+            self.oneline.SetValue(self.list.GetItem(selected, 3).GetText() == "True")
 
     def OnRemove(self, e):
         selected = self.list.GetFirstSelected()

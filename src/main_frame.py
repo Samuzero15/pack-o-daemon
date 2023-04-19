@@ -1,3 +1,4 @@
+import traceback
 import wx
 import os
 import sys
@@ -447,7 +448,7 @@ class Main(wx.Frame):
         
         if (not self.flags[6].GetValue()):
             rd.ResultDialog(self, header, event.data).ShowModal()
-    
+
     def ACSErrorOutput(self, output):
         self.response = -1
         acs_err_dialog = rd.ACSErrorDialog(self,output)
@@ -459,12 +460,15 @@ class Main(wx.Frame):
         dialog = pd.PlayDialog(self, self.play_params)
         dialog.OnPlay(e)
         self.play_params = dialog.GetCurrentSets()
-    
+        
     def OnPlay(self, e):
-        dialog = pd.PlayDialog(self, self.play_params)
-        if not self.flags[7].GetValue(): dialog.ShowModal()
-        else :                           dialog.OnPlay(e)
-        self.play_params = dialog.GetCurrentSets()
+        try:
+            dialog = pd.PlayDialog(self, self.play_params)
+            if not self.flags[7].GetValue(): dialog.ShowModal()
+            else :                           dialog.OnPlay(e)
+            self.play_params = dialog.GetCurrentSets()
+        except Exception as e:
+            dlg = wx.MessageDialog(None, "Something went wrong!\n" +"\n"+ traceback.format_exc(), "Ah shiet!").ShowModal()
         # saves the temporary settings while you're on the program. (Not saved to the ini)
     
     def OnLog(self, e):

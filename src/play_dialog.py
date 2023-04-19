@@ -326,7 +326,7 @@ class PlayDialog(wx.Dialog):
     def OnExploreSourceport(self, event):
         # Ask for a file, and add it to the file list
         filename = ""
-        wildcards = "Executeable file (*.exe)|*.exe"
+        wildcards = "Executeable file (*.exe;)|*.exe"
         dialog = wx.FileDialog(self, "Choose a Sourceport", self.dirname, "", wildcards, wx.FD_OPEN)
         if dialog.ShowModal() == wx.ID_OK:
             filename = dialog.GetFilename();

@@ -1,5 +1,6 @@
 
 import os
+import traceback
 import wx
 import json
 
@@ -54,8 +55,6 @@ class ConfigDialog(wx.Dialog):
     
     def _make_tab_build_settings(self, nb, frame):
         tab_bs = self.MakeTab(nb, "Build settings")
-        self.AddToTab(tab_bs, 
-                      wx.StaticText(tab_bs, label="Requires a restart to take effect"), 0, wx.ALL | wx.CENTER, 20)
         
         self.bs_inputs = []
         i1 = form.InputText(tab_bs, "Name", "name")
@@ -73,13 +72,10 @@ class ConfigDialog(wx.Dialog):
     def _make_tab_string_replacer(self, nb):
         tab_sr = self.MakeTab(nb, "String Replacer")
         self.sr_inputs = []
-
-        self.AddToTab(tab_sr, 
-                      wx.StaticText(tab_sr, label="Requires a restart to take effect"), 0, wx.UP | wx.DOWN | wx.CENTER, 10)
         
         string_replacer_list = []
         for key, value in const.ini_prop("string_replacer")["strings_to_replace"].items():
-            string_replacer_list.append(form.StringReplacerEntry(key, value["type"], value["content"]))
+            string_replacer_list.append(form.StringReplacerEntry(key, value["type"], value["content"], value["oneline"]))
         
         i8 = form.InputList_StringReplacer(tab_sr, "Input String replacer",  string_replacer_list)
         i9 = form.InputList(tab_sr, "Apply string replacement on file names in source folders", "files_to_replace", const.ini_prop("string_replacer")["files_to_replace"])
@@ -88,8 +84,6 @@ class ConfigDialog(wx.Dialog):
 
         self.AddToTab(tab_sr, i9.sizer, 0, wx.LEFT | wx.RIGHT | wx.CENTER | wx.EXPAND, 20)
         self.AddToTab(tab_sr, i8.sizer, 4, wx.ALL | wx.CENTER | wx.EXPAND, 20)
-        self.AddToTab(tab_sr, 
-                      wx.StaticText(tab_sr, label="Double click to a list element to copy the properties."), 0, wx.UP | wx.DOWN | wx.CENTER, 10)
 
     def _make_tab_acs_compilation(self, nb, frame):
         tab_ac = self.MakeTab(nb, "ACS Compilation")
@@ -99,54 +93,55 @@ class ConfigDialog(wx.Dialog):
         i11 = form.InputTextFile(tab_ac, "Executable", "executeable",
                                 frame.rootdir, "Executeable file (*.exe;)|*.exe", "Pick a file", "acs_compilation")
         i12 = form.InputText(tab_ac, "Extra parameters for the compiler", "extra_params", "acs_compilation")
-        
-        self.AddToTab(tab_ac, 
-                      wx.StaticText(tab_ac, label="Requires a restart to take effect"), 0, wx.UP | wx.DOWN | wx.CENTER, 10)
     
         self.ac_inputs.extend([i10, i11, i12])
         for input in self.ac_inputs:
             self.AddToTab(tab_ac, input.sizer)
 
     def OnSave(self, event):
-        s = {}
-        for i in self.bs_inputs:
-            data = i.GetValue()
-            s[data[0]] = data[1]
+        try:
+            s = {}
+            for i in self.bs_inputs:
+                data = i.GetValue()
+                s[data[0]] = data[1]
 
-        checks = []
-        for i in range(0,len(self.bf_checks)):
-            self.frame.flags[i] = self.bf_checks[i]
-            checks.append(self.bf_checks[i].GetValue())
+            checks = []
+            for i in range(0,len(self.bf_checks)):
+                self.frame.flags[i] = self.bf_checks[i]
+                checks.append(self.bf_checks[i].GetValue())
+                
+            json_buildflags = ("build_flags", checks)
+
+            o = {}
+            for i in self.sr_inputs:
+                data = i.GetValue()
+                o[data[0]] = data[1]
             
-        json_buildflags = ("build_flags", checks)
+            s[json_buildflags[0]] = json_buildflags[1]
+            s["string_replacer"] = o
 
-        o = {}
-        for i in self.sr_inputs:
-            data = i.GetValue()
-            o[data[0]] = data[1]
-        
-        s[json_buildflags[0]] = json_buildflags[1]
-        s["string_replacer"] = o
+            j = {}
+            for i in self.ac_inputs:
+                data = i.GetValue()
+                j[data[0]] = data[1]
 
-        j = {}
-        for i in self.ac_inputs:
-            data = i.GetValue()
-            j[data[0]] = data[1]
+            f = open(const.PROJECT_FILE, "r")
+            project_json = json.load(f)
+            f.close()
 
-        f = open(const.PROJECT_FILE, "r")
-        project_json = json.load(f)
-        f.close()
+            project_json["build_settings"] = s
+            project_json["acs_compilation"] = j
 
-        project_json["build_settings"] = s
-        project_json["acs_compilation"] = j
+            f = open(const.PROJECT_FILE, "w")
+            json.dump(project_json, f, indent=4)
+            f.close()
+            const.CONFIG_DATA = project_json
 
-        f = open(const.PROJECT_FILE, "w")
-        json.dump(project_json, f, indent=4)
-        f.close()
-
-        msg = "All the settings are saved in the '" +const.PROJECT_FILE+"' file."
-        dlg = wx.MessageDialog(self.frame, msg, "Settings saved on file").ShowModal()
-        self.Close()
+            msg = "All the settings are saved in the '" +const.PROJECT_FILE+"' file."
+            dlg = wx.MessageDialog(self.frame, msg, "Settings saved on file").ShowModal()
+            self.Close()
+        except Exception as e:
+            dlg = wx.MessageDialog(None, "Something went wrong!\n" +"\n"+ traceback.format_exc(), "Ah shiet!").ShowModal()
         
 
     
