@@ -12,6 +12,7 @@ import src.constants as const
 # Define notification event for thread completion
 EVT_BUILDRESULT_ID = wx.NewId()
 EVT_PLAYRESULT_ID = wx.NewId()
+EVT_STATUSMESSAGE_ID = wx.NewId()
 
 # Some extra constants.
 BUILD_SUCCESS = 1
@@ -22,10 +23,22 @@ BUILD_SKIPPED = -2
 def EVT_BUILDRESULT(win, func):
     """Define Result Event."""
     win.Connect(-1, -1, EVT_BUILDRESULT_ID, func)
+    
 def EVT_PLAYRESULT(win, func):
     """Define Result Event."""
     win.Connect(-1, -1, EVT_PLAYRESULT_ID, func)
 
+def EVT_STATUSMESSAGE(win, func):
+    """Define Result Event."""
+    win.Connect(-1, -1, EVT_STATUSMESSAGE_ID, func)
+
+class StatusBarEvent(wx.PyEvent):
+    def __init__(self, data, order=0):
+        """Init Result Event."""
+        wx.PyEvent.__init__(self)
+        self.SetEventType(EVT_STATUSMESSAGE_ID)
+        self.data = data
+        self.order = order
 
 class BuildResultEvent(wx.PyEvent):
     """Simple event to carry arbitrary result data."""
@@ -40,9 +53,11 @@ class BuildProject(threading.Thread):
     def __init__(self, notify_window):
         """Init Worker Thread Class."""
         threading.Thread.__init__(self)
+        
         self.ui = notify_window
         self.abort = False
         self.start()
+        
 
     def run(self):
         """Run Worker Thread."""
@@ -64,19 +79,21 @@ class BuildProject(threading.Thread):
         
         current = 1
         total = len(parts)
+        
         for part in parts:
             if part.skip: total -= 1
         
         if total == 0: 
-            wx.PostEvent(self.ui, BuildResultEvent(BUILD_SKIPPED))
-            return
+         wx.PostEvent(self.ui, BuildResultEvent(BUILD_SKIPPED))
+         return
         
         output = (0,[])
         files_to_pack = []
         # Good, now start.
+        
         for part in parts:
+            print("execute script!")
             output = part.BuildPart(self, versioned, noacs, snapshot, current, total)
-            
             if not part.skip: current += 1
             if output[0] != 0 or self.abort:
                 wx.PostEvent(self.ui, BuildResultEvent(output[0]))
@@ -96,7 +113,9 @@ class BuildProject(threading.Thread):
             
             if not os.path.exists(distDir):
                 os.mkdir(distDir)
-                self.ui.AddToLog(distDir + " directory created to allocate the packed projects.")
+                msg = distDir + " directory created to allocate the packed projects."
+                wx.PostEvent(ui, br.StatusBarEvent(msg))
+                # self.ui.AddToLog(distDir + " directory created to allocate the packed projects.")
                     
             if versioned: 
                 if snapshot : filename += "_" + self.ui.snapshot_tag + '.zip'
@@ -115,7 +134,9 @@ class BuildProject(threading.Thread):
                 current += 1
                 
             distzip.close()
-            self.ui.AddToLog("{0} Packed up Sucessfully".format(filename))
+            # self.ui.AddToLog("{0} Packed up Sucessfully".format(filename))
+            msg = "{0} Packed up Sucessfully".format(filename)
+            wx.PostEvent(ui, br.StatusBarEvent(msg))
             # print(file_list)
         
         os.chdir(rootdir)

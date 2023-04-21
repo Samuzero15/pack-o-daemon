@@ -1,5 +1,9 @@
 # Packodaemon Changelog
 
+## v1.5.2 [Linux thread fix-up]
+	* Modified the thread casting, now should be linux friendly. I think.
+	* Now the notifications only appear in windows, there will be a work-arround for linux soon-ish
+
 ## v1.5.1 [Smol bugfix]
 	* Changed the default project file generated for the first time use
 	* Added the oneline format for the string replacers!

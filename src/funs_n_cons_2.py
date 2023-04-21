@@ -11,11 +11,13 @@ import subprocess
 import wx
 from configparser import ConfigParser
 import src.constants as const
+import src.threads as thr
 from glob import iglob
 from shutil import copyfile
 
 def process_msg(builder, msg):
-    builder.ui.AddToLog(msg, 2)
+    #builder.ui.AddToLog(msg, 2)
+    wx.PostEvent(builder.ui, thr.StatusBarEvent(msg,2))
 
 #
 # Build main package (as .pk3, a good ol' zip, really)
