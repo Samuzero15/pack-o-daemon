@@ -11,7 +11,7 @@ from random import randint
 
 PROJECT_FILE = "project.json"
 
-VERSION = (1, 5, 1)
+VERSION = (1, 5, 2)
 EXENAME = "Pack-o-daemon"
 
 BUILD_FLAGS = [
