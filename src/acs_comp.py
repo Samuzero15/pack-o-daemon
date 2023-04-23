@@ -5,6 +5,7 @@ import subprocess
 import wx
 import src.funs_n_cons_2 as utils
 import src.constants as const
+import src.threads as br
 from glob import iglob
 from shutil import copyfile, rmtree
 
@@ -363,7 +364,8 @@ def acs_compile(builder, part):
                     # os.system('cls')
                     with open('acs.err', 'rt') as errorlog:
                         error = errorlog.read()
-                        builder.ui.AddToLog(error)
+                        # builder.ui.AddToLog(error)
+                        wx.PostEvent(builder.ui, br.StatusBarEvent(error))
                         # builder.ui.ACSErrorOutput(error)
                         wx.CallAfter(builder.ui.ACSErrorOutput, error + "\n\nDo you wish to RETRY or ABORT the ACS Compilation?")
                         errorlog.close()

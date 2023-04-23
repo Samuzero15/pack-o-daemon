@@ -1,8 +1,10 @@
 import traceback
+
 import wx
 import os
 import sys
 import datetime
+import time
 import src.threads as thread
 import src.funs_n_cons_2 as utils
 import src.projectpart as part
@@ -10,6 +12,7 @@ import src.play_dialog as pd
 import src.result_dialog as rd
 import src.config_dialog as cd
 import src.constants as const
+import platform
 
 import wx.lib.agw.hyperlink as hl
 from wx.adv import Animation, AnimationCtrl, NotificationMessage, TaskBarIcon, wxEVT_TASKBAR_BALLOON_CLICK
@@ -112,7 +115,8 @@ class Main(wx.Frame):
             sys.exit()
             
         wx.Frame.__init__(self, None, title=const.EXENAME, size=(400, 250))
-        self.sb = self.CreateStatusBar()
+        self.sb = wx.StatusBar()
+        self.sb.Create(self, id=wx.ID_ANY, style=wx.STB_DEFAULT_STYLE, name="Test Me")
         
         self.panel = wx.Panel(self)
         self.flags = []
@@ -159,6 +163,7 @@ class Main(wx.Frame):
         self.sb.SetStatusText("Ready")
         self.Fit()
         self.Centre(wx.BOTH)
+        self.SetStatusBar(self.sb)
         """
         icon = wx.EmptyIcon()
         pyinstaller run.py --onefile -w --name CacoPacker -i "icon.ico" --add-data "icon.ico"
@@ -221,6 +226,7 @@ class Main(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnConfig, self.btn_config);
         thread.EVT_BUILDRESULT(self,self.OnBuildResult)
         thread.EVT_PLAYRESULT(self,self.OnPlayResult)
+        thread.EVT_STATUSMESSAGE(self,self.AddToLog)
         
         sizer.Add(self.btn_build, 1, wx.CENTER, 2)
         sizer.Add(self.btn_log, 1, wx.CENTER, 2)
@@ -261,11 +267,20 @@ class Main(wx.Frame):
     def ClearLog(self):
         self.log = [];
     
-    def AddToLog(self, msg, order=0):
-        time = datetime.datetime.now()
-        self.sb.SetStatusText(msg)
-        self.log.append( "["+ time.strftime('%H:%M:%S') +']'+'-'*order + ">  " + msg);
-    
+    def AddToLog(self, event, order=0):
+        t = datetime.datetime.now()
+        order=event.order
+        msg = event.data
+        print("Order: ", (str)(order),", Msg: ", msg)
+        try:
+         self.sb.SetStatusText(msg)
+         #self.sb.SetStatusText(msg)
+        except Exception as e:
+         print(traceback.format_exc())
+        self.log.append( "["+ t.strftime('%H:%M:%S') +']'+'-'*order + ">  " + msg);
+        print("I'm done adding the message")
+       
+        
     def OnConfig(self, e):
 
         config = cd.ConfigDialog(self)
@@ -278,6 +293,7 @@ class Main(wx.Frame):
         
     
     def OnBuild(self, e):
+		
         self.cacodemon.SetAnimation(self.CACOGIF_SPIN)
         self.cacodemon.Play()
         if self.builder is None:
@@ -342,7 +358,8 @@ class Main(wx.Frame):
         notif_title = ""
         notif = NotificationMessage()
         notif.SetFlags(wx.ICON_INFORMATION)
-        notif.UseTaskBarIcon(self.taskbar)
+        if(platform.platform() == "Windows"):
+         notif.UseTaskBarIcon(self.taskbar)
         
         if(not skip_a_part and not (noacs or versioned or packed or play_it)): 
             if completed: 
@@ -406,17 +423,17 @@ class Main(wx.Frame):
         
         sucess = event.data
         
-        if sucess == thread.BUILD_ERROR: 
-            self.AddToLog("Project build stopped, caused by an error.")
+        if sucess == thread.BUILD_ERROR:
+            wx.PostEvent(self, thread.StatusBarEvent("Project build stopped, caused by an error."))
             self.gauge.SetValue(0)
             self.gauge.SetRange(0)
         elif sucess == thread.BUILD_CANCELED:
-            self.AddToLog("Project build canceled, by user will.")
+            wx.PostEvent(self, thread.StatusBarEvent("Project build canceled, by user will."))
             self.gauge.SetValue(0)
             self.gauge.SetRange(0)
             
         elif sucess == thread.BUILD_SUCCESS: 
-            self.AddToLog("Project build finished.")
+            wx.PostEvent(self, thread.StatusBarEvent("Project build finished."))
             self.gauge.SetValue(1)
             self.gauge.SetRange(1)
         
