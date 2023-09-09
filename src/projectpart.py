@@ -37,7 +37,7 @@ class ProjectPart():
         return pwad
     
     def PartMsg(self, thread, msg):
-        print("sending message")
+        # print("sending message")
         #wx.CallAfter(thread.ui.AddToLog, msg, 1)
         wx.PostEvent(thread.ui, br.StatusBarEvent(msg, 1))
         # thread.ui.AddToLog(msg, 1);
@@ -67,14 +67,14 @@ class ProjectPart():
         
         # First compile (If the part contains any acs script.)
         res = 0;
-        print("Launching build part")
+        # print("Launching build part")
         self.PartMsg(thread, "({1}/{2})\t\t=== Building {0} === ".format(self.name, current, total));
-        print("Launching build part")
+        # print("Launching build part")
         if(noacs):
             self.PartMsg(thread, "ACS Compilation skipped")
         elif(compileacs):
             res = acscomp.acs_compile(thread, self)
-            
+        print(res)
         # Check if the cancel button is called.
         if thread.abort or res == -1:
             if thread.abort:  fail_reason = br.BUILD_CANCELED

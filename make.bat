@@ -5,11 +5,16 @@ echo =============================================
 echo      CACO PACKER BUILDER batch script
 echo =============================================
 echo.
-echo Make sure you have python 3.8.5 or adobe.
+echo Make sure you have python 3.8.5 or adobe, and make sure there are 2 enviroments with you. The env32 and the env, also an envw7, done with python 3.8 for windows 7 compatible versions.
 echo. 
 pause
+call "create-version-file" metadata.yml --outfile file_version_info.txt
+call "%~dp0\envw7\scripts\activate"
+"pyinstaller" run.py -w --onefile --name pack-o-daemon_win7-32 -i "icon.ico" --add-data "src/*.*;src" --add-data "src/imgs/*.*;src/imgs" --add-data "changelog.md;." --version-file="file_version_info.txt"
+call "%~dp0\env32\scripts\activate"
+"pyinstaller" run.py -w --onefile --name pack-o-daemon_win32 -i "icon.ico" --add-data "src/*.*;src" --add-data "src/imgs/*.*;src/imgs" --add-data "changelog.md;." --version-file="file_version_info.txt"
 call "%~dp0\env\scripts\activate"
-"pyinstaller" run.py -w --onefile --name pack-o-daemon -i "icon.ico" --add-data "src/*.*;src" --add-data "src/imgs/*.*;src/imgs" --add-data "changelog.md;."
+"pyinstaller" run.py -w --onefile --name pack-o-daemon_win64 -i "icon.ico" --add-data "src/*.*;src" --add-data "src/imgs/*.*;src/imgs" --add-data "changelog.md;." --version-file="file_version_info.txt"
 echo. 
 echo =============================================
 echo        CACO PACKER BUILD Completed

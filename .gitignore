@@ -6,3 +6,5 @@ project copy.json
 __pycache__/
 doomproject/
 env/
+env32/
+envw7/

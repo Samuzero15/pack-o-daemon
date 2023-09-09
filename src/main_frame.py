@@ -1,3 +1,4 @@
+import re
 import traceback
 
 import wx
@@ -10,9 +11,11 @@ import src.funs_n_cons_2 as utils
 import src.projectpart as part
 import src.play_dialog as pd
 import src.result_dialog as rd
+import src.reports_dialog as rep
 import src.config_dialog as cd
 import src.constants as const
 import platform
+import src.execute_dialog as exe
 
 import wx.lib.agw.hyperlink as hl
 from wx.adv import Animation, AnimationCtrl, NotificationMessage, TaskBarIcon, wxEVT_TASKBAR_BALLOON_CLICK
@@ -32,36 +35,42 @@ class MyTaskBarIcon(TaskBarIcon):
         self.Bind(wx.EVT_MENU, self.frame.OnBuild, id=3)
         self.Bind(wx.EVT_MENU, self.frame.OnLog, id=4)
         self.Bind(wx.EVT_MENU, self.frame.OnPlay, id=5)
-        self.Bind(wx.EVT_MENU, self.frame.OnConfig, id=7)
-        self.Bind(wx.EVT_MENU, self.OnTaskBarClose, id=6)
+        self.Bind(wx.EVT_MENU, self.frame.OnConfig, id=6)
+        self.Bind(wx.EVT_MENU, self.frame.OnReports, id=7)
+        self.Bind(wx.EVT_MENU, self.frame.OnExecute, id=8)
+        self.Bind(wx.EVT_MENU, self.OnTaskBarClose, id=9)
         
         for i in range(0, len(const.BUILD_FLAGS)):
-            self.Bind(wx.EVT_MENU, self.OnChangeFlag(i), id=(8+i))
+            self.Bind(wx.EVT_MENU, self.OnChangeFlag(i), id=(10+i))
 
     def CreatePopupMenu(self):
         menu = wx.Menu()
         
         menu_build_flags = wx.Menu()
         for i in range(0, len(const.BUILD_FLAGS)):
-            menu_build_flags.Append(8+i, const.BUILD_FLAGS[i][0], kind=wx.ITEM_CHECK)
-            menu_build_flags.Check(8+i, self.frame.flags[i].GetValue())
+            menu_build_flags.Append(10+i, const.BUILD_FLAGS[i][0], kind=wx.ITEM_CHECK)
+            menu_build_flags.Check(10+i, self.frame.flags[i].GetValue())
 
-        menu.Append(8, 'Build Flags', menu_build_flags)
+        menu.Append(10, 'Build Flags', menu_build_flags)
         menu.AppendSeparator()
         menu.Append(3, 'Build')
         menu.Append(4, 'Log')
         menu.Append(5, 'Play')
-        menu.Append(7, 'Settings')
+        menu.Append(6, 'Settings')
+        menu.Append(7, 'Reports')
+        menu.Append(8, 'Execute')
         menu.AppendSeparator()
         menu.Append(1, 'Show')
         menu.Append(2, 'Hide')
-        menu.Append(6, 'Close')
+        menu.Append(9, 'Close')
 
         if not self.frame.builder is None:
             menu.SetLabel(3, 'Abort')
             menu.Enable(5, False)
+            menu.Enable(6, False)
             menu.Enable(7, False)
             menu.Enable(8, False)
+            menu.Enable(10, False)
 
         if not self.frame.btn_log.IsEnabled():
             menu.Enable(4, False)
@@ -114,7 +123,7 @@ class Main(wx.Frame):
             wx.MessageDialog(None, msg, "Missing Project Parts").ShowModal()
             sys.exit()
             
-        wx.Frame.__init__(self, None, title=const.EXENAME, size=(400, 250))
+        wx.Frame.__init__(self, None, title=const.EXENAME, size=(275, 400))
         self.sb = wx.StatusBar()
         self.sb.Create(self, id=wx.ID_ANY, style=wx.STB_DEFAULT_STYLE, name="Test Me")
         
@@ -124,12 +133,15 @@ class Main(wx.Frame):
         self.skip_parts = []
         skip_parts_labels = []
         for part_lbl in self.projectparts:
-            skip_parts_labels.append("Skip " + part_lbl.name);
+            skip_parts_labels.append("Skip " + part_lbl.name)
         
-        self.btn_build = wx.Button(self.panel,label="Build");
-        self.btn_play = wx.Button(self.panel,label="Play");
-        self.btn_log = wx.Button(self.panel,label="No Log");
-        self.btn_config = wx.Button(self.panel,label="Settings");
+        self.btn_build = wx.Button(self.panel,label="Build")
+        self.btn_play = wx.Button(self.panel,label="Play")
+        self.btn_log = wx.Button(self.panel,label="No Log")
+        self.btn_reports = wx.Button(self.panel,label="Reports")
+        self.btn_execute = wx.Button(self.panel, label="Execute")
+        self.btn_config = wx.Button(self.panel,label="Settings")
+        
         self.btn_log.Disable()
         
         panelSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -161,7 +173,6 @@ class Main(wx.Frame):
         
         self.panel.SetSizerAndFit(topSizer)
         self.sb.SetStatusText("Ready")
-        self.Fit()
         self.Centre(wx.BOTH)
         self.SetStatusBar(self.sb)
         """
@@ -220,10 +231,12 @@ class Main(wx.Frame):
     
     def _build_buttons(self, sizer):
     
-        self.Bind(wx.EVT_BUTTON, self.OnBuild, self.btn_build);
-        self.Bind(wx.EVT_BUTTON, self.OnPlay, self.btn_play);
-        self.Bind(wx.EVT_BUTTON, self.OnLog, self.btn_log);
-        self.Bind(wx.EVT_BUTTON, self.OnConfig, self.btn_config);
+        self.Bind(wx.EVT_BUTTON, self.OnBuild, self.btn_build)
+        self.Bind(wx.EVT_BUTTON, self.OnPlay, self.btn_play)
+        self.Bind(wx.EVT_BUTTON, self.OnLog, self.btn_log)
+        self.Bind(wx.EVT_BUTTON, self.OnConfig, self.btn_config)
+        self.Bind(wx.EVT_BUTTON, self.OnReports, self.btn_reports)
+        self.Bind(wx.EVT_BUTTON, self.OnExecute, self.btn_execute)
         thread.EVT_BUILDRESULT(self,self.OnBuildResult)
         thread.EVT_PLAYRESULT(self,self.OnPlayResult)
         thread.EVT_STATUSMESSAGE(self,self.AddToLog)
@@ -232,6 +245,8 @@ class Main(wx.Frame):
         sizer.Add(self.btn_log, 1, wx.CENTER, 2)
         sizer.Add(self.btn_play, 1, wx.CENTER, 2)
         sizer.Add(self.btn_config, 1, wx.CENTER, 2)
+        sizer.Add(self.btn_reports, 1, wx.CENTER, 2)
+        sizer.Add(self.btn_execute, 1, wx.CENTER, 2)
     
         return sizer
     
@@ -271,14 +286,14 @@ class Main(wx.Frame):
         t = datetime.datetime.now()
         order=event.order
         msg = event.data
-        print("Order: ", (str)(order),", Msg: ", msg)
+        #print("Order: ", (str)(order),", Msg: ", msg)
         try:
          self.sb.SetStatusText(msg)
          #self.sb.SetStatusText(msg)
         except Exception as e:
          print(traceback.format_exc())
         self.log.append( "["+ t.strftime('%H:%M:%S') +']'+'-'*order + ">  " + msg);
-        print("I'm done adding the message")
+        #print("I'm done adding the message")
        
         
     def OnConfig(self, e):
@@ -293,9 +308,10 @@ class Main(wx.Frame):
         
     
     def OnBuild(self, e):
-		
         self.cacodemon.SetAnimation(self.CACOGIF_SPIN)
         self.cacodemon.Play()
+        self.response = -1
+        self.builder = None
         if self.builder is None:
             if self.flags[1].GetValue() and self.flags[4].GetValue():
                 self.snapshot_tag_last = self.snapshot_tag
@@ -307,6 +323,9 @@ class Main(wx.Frame):
             self.ToggleFlags(False)
             self.btn_build.SetLabel("Abort")
             self.btn_play.Disable()
+            self.btn_reports.Disable()
+            self.btn_execute.Disable()
+            self.btn_config.Disable()
             self.ClearLog()
             self.builder = thread.BuildProject(self)
         else:
@@ -328,11 +347,11 @@ class Main(wx.Frame):
     
     def ReportResults(self, sucess):
         
-        noacs =     self.flags[0].GetValue();
-        versioned = self.flags[1].GetValue();
-        packed =    self.flags[2].GetValue();
-        play_it =   self.flags[3].GetValue();
-        snapshot =  self.flags[4].GetValue();
+        noacs =     self.flags[0].GetValue()
+        versioned = self.flags[1].GetValue()
+        packed =    self.flags[2].GetValue()
+        play_it =   self.flags[3].GetValue()
+        snapshot =  self.flags[4].GetValue()
         
         completed = sucess == thread.BUILD_SUCCESS
         failure = sucess == thread.BUILD_CANCELED or sucess == thread.BUILD_ERROR
@@ -346,7 +365,7 @@ class Main(wx.Frame):
             self.cacodemon.Play()
         
         nopart = []
-        skip_a_part = False;
+        skip_a_part = False
         for part in self.projectparts:
             if part.skip: 
                 nopart.append(part.skip) 
@@ -445,6 +464,9 @@ class Main(wx.Frame):
         self.btn_build.SetLabel("Build")
         self.btn_build.Enable()
         self.btn_play.Enable()
+        self.btn_reports.Enable()
+        self.btn_execute.Enable()
+        self.btn_config.Enable()
         self.ToggleFlags(True)
         
         
@@ -490,6 +512,9 @@ class Main(wx.Frame):
     
     def OnLog(self, e):
         rd.ResultDialog(self, self.lastlog[0], self.lastlog[1]).ShowModal()
+    
+    def OnReports(self, e):
+        rep.ReportsDialog(self).ShowModal()
 
     def OnClose(self, event):
         self.taskbar.Destroy()
@@ -498,3 +523,6 @@ class Main(wx.Frame):
     def OnShowMeUp(self, event):
         if not self.IsShown():
             self.Show()
+    
+    def OnExecute(self, event):
+        exe.ExecuteDialog(self).ShowModal()

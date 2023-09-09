@@ -92,7 +92,7 @@ class BuildProject(threading.Thread):
         # Good, now start.
         
         for part in parts:
-            print("execute script!")
+            # print("execute script!")
             output = part.BuildPart(self, versioned, noacs, snapshot, current, total)
             if not part.skip: current += 1
             if output[0] != 0 or self.abort:
@@ -114,7 +114,7 @@ class BuildProject(threading.Thread):
             if not os.path.exists(distDir):
                 os.mkdir(distDir)
                 msg = distDir + " directory created to allocate the packed projects."
-                wx.PostEvent(ui, br.StatusBarEvent(msg))
+                wx.PostEvent(self.ui, StatusBarEvent(msg))
                 # self.ui.AddToLog(distDir + " directory created to allocate the packed projects.")
                     
             if versioned: 
@@ -136,7 +136,7 @@ class BuildProject(threading.Thread):
             distzip.close()
             # self.ui.AddToLog("{0} Packed up Sucessfully".format(filename))
             msg = "{0} Packed up Sucessfully".format(filename)
-            wx.PostEvent(ui, br.StatusBarEvent(msg))
+            wx.PostEvent(self.ui, StatusBarEvent(msg))
             # print(file_list)
         
         os.chdir(rootdir)

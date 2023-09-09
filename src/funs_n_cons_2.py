@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+import re
 import sys
 import threading
 import traceback
@@ -88,13 +89,13 @@ def makepkg(builder, sourcePath, destPath, notxt=False, skipVariableTexts=False)
     
 # Return if this file should be ignored.
 def file_igonre(file):
-    should_ignore = False;
+    should_ignore = False
     # print(const.get_skip_filetypes());
     for ext in const.get_skip_filetypes():
         # print(ext.strip(" "))
-        if not (should_ignore): should_ignore = file.endswith(ext.strip(" "));
-        else: break;
-    return should_ignore;
+        if not (should_ignore): should_ignore = file.endswith(ext.strip(" "))
+        else: break
+    return should_ignore
     
 # Return if this file is a placeholding file.
 def file_placeholder(file):
@@ -261,3 +262,87 @@ def relativePath (path):
         path = os.path.join(os.getcwd(), path)
         path = path.replace('..\\', '')
     return path
+
+def getFileName(path):
+    if os.path.isfile(path):
+        filename = path.split(os.sep)
+        filename = filename[len(filename)-1:]
+        return filename[0]
+    return False
+
+ActorList = []
+
+def Decorate_ActorToString(actor):
+    linenumber = (str)(actor["line"])
+    defname = actor["actor"]
+    parentname = (" : " + actor["inherits"]) if len(actor["inherits"]) > 0 else ""
+    replacedname = (" replaces " + actor["replaces"]) if len(actor["replaces"]) > 0 else ""
+    doomednum = (" " + (str)(actor["doomednum"])) if actor["doomednum"] > 0 else ""
+
+    return linenumber +": " +defname + parentname + replacedname + doomednum
+
+def Decorate_ActorDoomEdNum(actor):
+    defname = actor["actor"]
+    doomednum = (str)(actor["doomednum"])
+
+    return "(" + doomednum + ") --> " + defname
+
+def Decorate_searchForActors(path_search, file_search = "decorate", extension = False):
+     filecompare = ""
+     for path, dirs, files in os.walk (path_search):
+        for file in files:
+            # 
+            if extension == True: filecompare = file.lower()
+            else: filecompare = str.lower(file.split(".")[0])
+            
+            # print (filecompare == file_search)
+            if(filecompare == file_search):
+                line_count = 1
+                current_file = file_search
+                f = open(os.path.join(path, file), "r")
+                
+                # Search for next include line.
+                for line in f.readlines():
+                    isactorline = re.search("^Actor", line, re.IGNORECASE) or re.search("^Class", line, re.IGNORECASE)
+                    if(isactorline is not None):
+                        # REGEXS
+                        # GetActor (first index) : 
+                        # print("Found actor line : '" + isactorline.string + "'")
+                        actorline = isactorline.string
+                        actorline = actorline.split("//", 1)[0]
+                        actorline = actorline.replace('\n', "")
+                        actorline = actorline.replace('\t', "")
+                        actorline = actorline.split("{", 1)[0]
+                        replaceactor = ""
+                        parentactor = ""
+                        doomednum = 0
+
+                        definedactor = re.search('(?:actor *)([" \w\d]+)', actorline, re.IGNORECASE)
+                        if (definedactor is not None):
+                            definedactor = definedactor.group(1)
+                            parentactor = re.search("(?:: *)([ \w\d]+)", actorline)
+                            parentactor = parentactor.group(1) if parentactor is not None else ""
+                            replaceactor = re.search("(?:replaces *)([ \w\d]+)", actorline)
+                            replaceactor = replaceactor.group(1) if replaceactor is not None else ""
+                            doomednumregex = re.search("(?: +)([\d]+)", actorline)
+                            doomednum = (int)(doomednumregex.group(1)) if doomednumregex is not None else 0
+                            
+                            path = path.replace(path_search, "...")
+                            ActorList.append({"path":path, "file":current_file, "line":line_count,
+                                            "actor":definedactor, "inherits":parentactor, "replaces":replaceactor, "doomednum":doomednum})
+                        
+                        # list_add += "'"+actorline+"', defined actor = '" + definedactor + "', parentactor = '" + parentactor + "', replaceactor = '" + replaceactor + "'\n"
+                    
+                    isincludeline = re.search("^#include", line, re.IGNORECASE)
+                    if(isincludeline is not None):
+                        includeline = isincludeline.string.split("\"")[1]
+                        includefile = includeline.split("/")
+                        includefile_name = includefile[len(includefile)-1:][0]
+                        Decorate_searchForActors(path_search, includefile_name, True)
+                    
+                    line_count+=1
+                    
+                # for line in f:
+                    # print(line)
+
+                f.close()

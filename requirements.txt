@@ -4,5 +4,6 @@ numpy
 pefile
 Pillow
 six
-wxPython
+wxPython<4.2.0
 pyinstaller
+pyinstaller-versionfile

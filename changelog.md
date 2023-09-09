@@ -1,4 +1,13 @@
 # Packodaemon Changelog
+## v1.6.0 [Reports, Command executer, and few fixes.]
+	* Now you can call extra commands with the Execute button!
+	* Now you can see some informative stuff with the Reports button!
+	(Such as the actors in your project, the doomednums, and the file directory, aside of other useful information)
+	* Some extra fixes
+
+## v1.5.3 [Adding some meta-data and a 32bit build yay!]
+	* Some builds later.
+	* Added some yml and updated requirements for faster builds.
 
 ## v1.5.2 [Linux thread fix-up]
 	* Modified the thread casting, now should be linux friendly. I think.

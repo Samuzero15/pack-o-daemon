@@ -1,3 +1,4 @@
+import os
 import wx
 import wx.stc as stc
 import src.constants as c
@@ -15,6 +16,7 @@ class ResultDialog(wx.Dialog):
         self.txt = stc.StyledTextCtrl(panel)
         btn = wx.Button(panel, label=c.get_accept_msg())
         btn_copy = wx.Button(panel, label="Copy to clipboard")
+        btn_save = wx.Button(panel, label="Save to File")
         self.wrap = wx.CheckBox(panel, label="W. Wrap")
         
         self.txt.SetText(results)
@@ -24,9 +26,11 @@ class ResultDialog(wx.Dialog):
 
         cont_btn.Add(btn, 0, wx.CENTER | wx.ALL, 5)
         cont_btn.Add(btn_copy, 0, wx.CENTER | wx.ALL, 5)
+        cont_btn.Add(btn_save, 0, wx.CENTER | wx.ALL, 5)
         
         self.Bind(wx.EVT_BUTTON, self.OnClick, btn)
         self.Bind(wx.EVT_BUTTON, self.onCopy, btn_copy)
+        self.Bind(wx.EVT_BUTTON, self.onSave, btn_save)
         self.Bind(wx.EVT_CHECKBOX, self.OnWrap, self.wrap)
         
         cont.Add(label, 0, wx.ALL, 2)
@@ -47,9 +51,24 @@ class ResultDialog(wx.Dialog):
         if wx.TheClipboard.Open():
             wx.TheClipboard.SetData(self.dataObj)
             wx.TheClipboard.Close()
-            wx.MessageBox("Copied to the clipboard!", "Copied!")
+            wx.MessageBox("Results Copied to the clipboard!", "Copied!")
         else:
             wx.MessageBox("Unable to open the clipboard", "Error")
+            
+    def onSave(self, event):
+        try:
+            dlg = wx.FileDialog(self, "Save to file:", ".", "", "Text (*.txt)|*.txt", wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+            if (dlg.ShowModal() == wx.ID_OK):
+                self.filename = dlg.GetFilename()
+                self.dirname = dlg.GetDirectory()
+                f = open(os.path.join(self.dirname, self.filename), 'w')
+                f.write(self.txt.GetValue())
+                f.close()
+                wx.MessageBox("Results saved in "+os.path.join(self.dirname, self.filename)+"!", "Saved!")
+            dlg.Destroy()
+        except:
+            pass
+
 
 class TabText(wx.Panel):
     def __init__(self, parent, title, text):
