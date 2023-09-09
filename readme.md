@@ -63,6 +63,7 @@ You can use any text editor if you wish.
 * **Xaser** For the base code of his package builder for the eriguns doom mods.
 * **AdmiralKosnov** For changing the name. The last one sounded more of a fudge packer. 
 * **TDRR** For guiding me on how tf I set a linux enviroment for testing. Without him, this tool would be in Windows only :)
+* **FusedQyou** For the report button's idea.
 
 ### See the changelog in the changelog.md file
 
