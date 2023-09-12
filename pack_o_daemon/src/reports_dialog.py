@@ -2,10 +2,10 @@
 import os
 import wx
 import wx.stc as stc
-import src.constants as c
-import src.funs_n_cons_2 as utils
-import src.result_dialog as rd
-from src.zdoom_ednums import Zdoom_EdNums
+import pack_o_daemon.src.constants as c
+import pack_o_daemon.src.funs_n_cons_2 as utils
+import pack_o_daemon.src.result_dialog as rd
+from pack_o_daemon.src.zdoom_ednums import Zdoom_EdNums
 import mimetypes
 
 class ReportsDialog(wx.Dialog):

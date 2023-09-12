@@ -1,7 +1,7 @@
 
 import json
 import wx
-import src.constants as const
+import pack_o_daemon.src.constants as const
 
 command_data = []
 
@@ -87,20 +87,22 @@ class ExecuteDialog_AddCommand(wx.Dialog):
     def __init__(self, parent):
         wx.Dialog.__init__(self, parent, title="Add a new Execute command", size=(560, 200))
         self.parent = parent
-        panel = wx.Panel(self, size=(300, 300))
+        # self.panel = wx.Panel(self, size=(300, 300))
+        main_cont = wx.BoxSizer(wx.VERTICAL)
         cont = wx.BoxSizer(wx.VERTICAL)
-        self.txt_name = wx.TextCtrl(panel, size=(500, 25))
-        self.txt_cmd = wx.TextCtrl(panel, size=(500, 25))
-        btn_add = wx.Button(panel, label="Add Command")
+        self.txt_name = wx.TextCtrl(self, size=(500, 25))
+        self.txt_cmd = wx.TextCtrl(self, size=(500, 25))
+        btn_add = wx.Button(self, label="Add Command")
 
-        panel.Bind(wx.EVT_BUTTON, self.OnAdd, btn_add)
+        self.Bind(wx.EVT_BUTTON, self.OnAdd, btn_add)
 
         cont.Add(wx.StaticText(self,label="Name"), 1, wx.CENTER | wx.LEFT | wx.RIGHT | wx.EXPAND, 5)
         cont.Add(self.txt_name, 1, wx.CENTER | wx.LEFT | wx.RIGHT, 5)
         cont.Add(wx.StaticText(self,label="CMD"), 1, wx.CENTER | wx.LEFT | wx.RIGHT | wx.EXPAND, 5)
         cont.Add(self.txt_cmd, 1, wx.CENTER | wx.LEFT | wx.RIGHT, 5)
         cont.Add(btn_add, 2, wx.CENTER | wx.LEFT | wx.RIGHT | wx.EXPAND, 10)
-        panel.SetSizerAndFit(cont)
-    
+        self.SetSizerAndFit(cont)
+    	
+    	
     def OnAdd(self, event):
         self.Close()

@@ -3,8 +3,8 @@ import traceback
 import wx
 import os
 import sys
-import src.main_frame as frame
-import src.constants as const
+import pack_o_daemon.src.main_frame as frame
+import pack_o_daemon.src.constants as const
 
 
 def GreetUser():
@@ -19,8 +19,9 @@ def GreetUser():
     msg += "\n\nThis time " + name + " will not start."
     msg += "\nRun it again once you're done with the "+const.PROJECT_FILE+" file."
     dlg = wx.MessageDialog(None, msg, "Welcome!").ShowModal()
-    
-if __name__ == "__main__":
+
+
+def main():
     app = wx.App()
     try:
         if const.FIRST_TIME:

@@ -1,7 +1,7 @@
 import wx
 import os
-import src.constants as const
-import src.funs_n_cons_2 as utils
+import pack_o_daemon.src.constants as const
+import pack_o_daemon.src.funs_n_cons_2 as utils
 
 class InputComboBox():
     def __init__(self, panel, _label, json_entry, category="build_settings", _choices=[]):

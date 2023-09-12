@@ -4,10 +4,10 @@ import os
 import threading
 import subprocess
 import time
-import src.funs_n_cons_2 as utils
-import src.result_dialog as rd
+import pack_o_daemon.src.funs_n_cons_2 as utils
+import pack_o_daemon.src.result_dialog as rd
 import zipfile
-import src.constants as const
+import pack_o_daemon.src.constants as const
 
 # Define notification event for thread completion
 EVT_BUILDRESULT_ID = wx.NewId()

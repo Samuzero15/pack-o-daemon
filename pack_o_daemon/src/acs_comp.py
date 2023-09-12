@@ -3,9 +3,9 @@ import os
 import sys
 import subprocess
 import wx
-import src.funs_n_cons_2 as utils
-import src.constants as const
-import src.threads as br
+import pack_o_daemon.src.funs_n_cons_2 as utils
+import pack_o_daemon.src.constants as const
+import pack_o_daemon.src.threads as br
 from glob import iglob
 from shutil import copyfile, rmtree
 

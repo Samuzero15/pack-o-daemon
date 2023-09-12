@@ -1,7 +1,7 @@
 import os
 import wx
 import wx.stc as stc
-import src.constants as c
+import pack_o_daemon.src.constants as c
 
 class ResultDialog(wx.Dialog):
     def __init__(self, parent, header, results, _title="Results"):

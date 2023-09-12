@@ -11,8 +11,8 @@ import datetime
 import subprocess
 import wx
 from configparser import ConfigParser
-import src.constants as const
-import src.threads as thr
+import pack_o_daemon.src.constants as const
+import pack_o_daemon.src.threads as thr
 from glob import iglob
 from shutil import copyfile
 
@@ -115,7 +115,8 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 def get_source_img(img):
-    return resource_path(os.path.join("src/imgs", img))
+    #return resource_path(os.path.join("src/imgs", img))
+    return os.path.join(os.path.dirname(__file__), 'imgs', img)
 
 #
 # Make a distribution version

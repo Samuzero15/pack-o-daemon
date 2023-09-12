@@ -1,4 +1,11 @@
 # Packodaemon Changelog
+## v1.6.2 [Smoll reorganization]
+	* Reorganized the whole directory, for the linux users.
+	* Changelog fix on Patch notes link
+
+## v1.6.1 [Linux Fixes]
+	* Some linux fixes
+
 ## v1.6.0 [Reports, Command executer, and few fixes.]
 	* Now you can call extra commands with the Execute button!
 	* Now you can see some informative stuff with the Reports button!

@@ -6,16 +6,16 @@ import os
 import sys
 import datetime
 import time
-import src.threads as thread
-import src.funs_n_cons_2 as utils
-import src.projectpart as part
-import src.play_dialog as pd
-import src.result_dialog as rd
-import src.reports_dialog as rep
-import src.config_dialog as cd
-import src.constants as const
+import pack_o_daemon.src.threads as thread
+import pack_o_daemon.src.funs_n_cons_2 as utils
+import pack_o_daemon.src.projectpart as part
+import pack_o_daemon.src.play_dialog as pd
+import pack_o_daemon.src.result_dialog as rd
+import pack_o_daemon.src.reports_dialog as rep
+import pack_o_daemon.src.config_dialog as cd
+import pack_o_daemon.src.constants as const
 import platform
-import src.execute_dialog as exe
+import pack_o_daemon.src.execute_dialog as exe
 
 import wx.lib.agw.hyperlink as hl
 from wx.adv import Animation, AnimationCtrl, NotificationMessage, TaskBarIcon, wxEVT_TASKBAR_BALLOON_CLICK
@@ -256,7 +256,8 @@ class Main(wx.Frame):
     
     def OnChangelog(self, e):
         msg = ""
-        changelog_path = utils.resource_path(os.path.join(".", "changelog.md"))
+        print(os.path.split(os.path.dirname(__file__))[0])
+        changelog_path = os.path.join(os.path.split(os.path.dirname(__file__))[0], 'changelog.md')#utils.resource_path(os.path.join(".", "changelog.md"))
         allchanges = []
         try:
             change_ver = ""

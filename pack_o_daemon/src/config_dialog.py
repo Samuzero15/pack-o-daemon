@@ -4,9 +4,9 @@ import traceback
 import wx
 import json
 
-import src.constants as const
-import src.funs_n_cons_2 as utils
-import src.form_inputs as form
+import pack_o_daemon.src.constants as const
+import pack_o_daemon.src.funs_n_cons_2 as utils
+import pack_o_daemon.src.form_inputs as form
 
 class ConfigDialog(wx.Dialog):
     def __init__(self, frame):

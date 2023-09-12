@@ -1,5 +1,5 @@
 # Samuzero15's Pack-o-daemon 
-Just an small asistant for your directory based doom projects.
+Just a small asistant for your directory based doom projects.
 #### What is this?
 It's a small tool that helps you to pack your directory based doom project in a single zip.
 

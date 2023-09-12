@@ -6,10 +6,10 @@ import time
 import sys
 import subprocess
 import zipfile
-import src.threads as thread
-import src.funs_n_cons_2 as utils
-import src.projectpart as part
-import src.constants as const
+import pack_o_daemon.src.threads as thread
+import pack_o_daemon.src.funs_n_cons_2 as utils
+import pack_o_daemon.src.projectpart as part
+import pack_o_daemon.src.constants as const
 
 from configparser import ConfigParser
 

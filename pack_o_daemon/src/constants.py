@@ -4,14 +4,14 @@ import datetime
 import traceback
 import wx
 
-import src.projectpart as part
+import pack_o_daemon.src.projectpart as part
 from configparser import ConfigParser
 from random import randint
 
 
 PROJECT_FILE = "project.json"
 
-VERSION = (1, 6, 0)
+VERSION = (1, 6, 2)
 EXENAME = "Pack-o-daemon"
 
 BUILD_FLAGS = [
@@ -100,7 +100,13 @@ def make_default_json():
             "type": "acc",
             "executeable": "acc.exe",
             "extra_params" : ""
-        }
+        },
+        "cmd_execute" : [
+			{
+				"name":"test",
+				"cmd":"echo 'hello world'"
+			}
+		]
         
     }
     # Serializing json
