@@ -1,3 +1,9 @@
+<center>
+ 
+![Pack-o-Daemon logo](https://i.imgur.com/ZuvUlB2.png)
+
+</center>
+
 # Samuzero15's Pack-o-daemon 
 Just a small asistant for your directory based doom projects.
 #### What is this?
@@ -42,28 +48,38 @@ If you change something from the project.ini file, and you have the executable r
 2. Clone the repository, and extract it.
 3. Get the console and ```cd``` it to the extracted repository.
 4. Make a new virtual enviroment with ```python -m venv env```,
+	> * For windows, you can make 3 virtual enviroments, one with 32 bits, other with 64 bits and other with 32bits for python 3.8.7 (Windows 7 compatible)
 5. Use the command ```.\env\scripts\activate```, and check if "(env)" is right next to the command prompt line.
 6. Now get the requirements installed with ```pip install -r requirements.txt```
 7. And you're ready to go, it depends on what you want to do.
-	> * To run it, do step 5 if env is not activated, and then ```python run.py```
+	> * To build a executeable (for windows), execute this cmd line.
+		```"pyinstaller" pack_o_daemon\run.py -w --onefile --name pack-o-daemon_win7-32 -i "icon.ico" --add-data "pack_o_daemon/src/*.*;pack_o_daemon/src" --add-data "pack_o_daemon/src/imgs/*.*;pack_o_daemon/src/imgs" --add-data "changelog.md;." --version-file="file_version_info.txt" ```
+	> * Depending on your python build (on the virtual enviroment too), the output file will be 64 bits or 32 bits.
+	> * There is a make.bat that does it for you (if you have the three enviroments)
+	> * Not recommended for Linux, it will make a bloatloaded file of almost 100mbs.
 
-	> * To build it execute this line using pyinstaller.
-		```"pyinstaller" run.py -w --onefile --name pack-o-daemon -i "icon.ico" --add-data "src/*.*;src" --add-data "src/imgs/*.*;src/imgs" --add-data "changelog.md;."``` 
-		* Depending on your python build (on the virtual enviroment too), the output file will be 64 bits or 32 bits.
-		* Depending on what OS you execute this, might output to Windows, Linux or Mac.
-
+	> * To build a package for pip, ```python setup.py sdist bdist_wheel```. (Recommended for windows and Linux users)
+	
+	> * To run it you should install the package with, ```pip install --upgrade .``` or ```pip install --upgrade pack-o-daemon``` on the base directory, once built, type ```pack_o_daemon``` on the terminal.
 
 You can use any text editor if you wish.
 
 #### Frequently Asked Questions
 > No questions yet...
 
+### [Here it is a link to the wiki of this project](https://github.com/Samuzero15/pack-o-daemon/wiki) if you don't know how to use this tool!
+
+Also on
+* [Doomworld](https://www.doomworld.com/forum/topic/139937-pack-o-daemon-a-helper-for-your-dooms-directory-pk3-mod)
+* [Zandronum](https://zandronum.com/forum/viewtopic.php?f=58&t=11022)
+* [Itch.Io](https://samuzero15.itch.io/pack-o-daemon)
+
 #### Thanks to
 * **sirjuddington** For the slade's acs compiler source code
 * **Xaser** For the base code of his package builder for the eriguns doom mods.
 * **AdmiralKosnov** For changing the name. The last one sounded more of a fudge packer. 
-* **TDRR** For guiding me on how tf I set a linux enviroment for testing. Without him, this tool would be in Windows only :)
-* **FusedQyou** For the report button's idea.
+* **TDRR** For guiding me on how tf I set a linux enviroment for testing. Without him, this tool would be in Windows only :), also for the Execute button.
+* **FusedQyou** For the Report button's idea.
 
 ### See the changelog in the changelog.md file
 

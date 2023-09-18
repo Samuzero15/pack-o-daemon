@@ -1,4 +1,11 @@
 # Packodaemon Changelog
+## v1.6.3 [Some new build flags + Reorganization]
+	* Fixed the make.bat file for the windows builds.
+	* Updated Readme.md
+	* Deharcoded the build flags.
+	* Added the "Cache ACS Files" build flag, searchs for libraries once, and update these files always.
+	* Added also the "Hide ACS Sources" build flag, now you can make your code a closed source.
+
 ## v1.6.2 [Smoll reorganization]
 	* Reorganized the whole directory, for the linux users.
 	* Changelog fix on Patch notes link

@@ -13,6 +13,7 @@ import wx
 from configparser import ConfigParser
 import pack_o_daemon.src.constants as const
 import pack_o_daemon.src.threads as thr
+from pack_o_daemon.src.acs_comp import get_acs_allfilenames_to_compile
 from glob import iglob
 from shutil import copyfile
 
@@ -37,7 +38,7 @@ def makepkg(builder, sourcePath, destPath, notxt=False, skipVariableTexts=False)
         
         for file in files:
             if builder.abort: return None
-            if not (file_igonre(file) or (skipVariableTexts and file_placeholder(file))): # special exceptions
+            if not (file_ignore(builder, file) or (skipVariableTexts and file_placeholder(file))): # special exceptions
             # Remove sourcepath from filenames in zip
                 total_files += 1
                 splitpath = path.split(os.sep)
@@ -88,13 +89,25 @@ def makepkg(builder, sourcePath, destPath, notxt=False, skipVariableTexts=False)
     return (distzip)
     
 # Return if this file should be ignored.
-def file_igonre(file):
+def file_ignore(builder, file):
     should_ignore = False
     # print(const.get_skip_filetypes());
     for ext in const.get_skip_filetypes():
         # print(ext.strip(" "))
-        if not (should_ignore): should_ignore = file.endswith(ext.strip(" "))
-        else: break
+        if file.endswith(ext.strip(" ")): 
+            should_ignore = True 
+            break
+    acs_hide = get_acs_allfilenames_to_compile()
+    # print("Length of acs list: " + (str)(len(acs_hide)))
+
+    if(len(acs_hide) > 0 and builder.ui.flags[const.BFLAG_HIDEACSSOURCE].GetValue()):
+        # print("Flag enabled, must ignore the acs sources.")
+        for f in acs_hide:
+            if f[2] == file: 
+                should_ignore = True
+                break
+
+
     return should_ignore
     
 # Return if this file is a placeholding file.
@@ -256,6 +269,12 @@ def printProgress(builder, iteration=-1, total=10, prefix = '', suffix = ''):
         process_msg(builder, f'{prefix} {percent}% {suffix}')
     # print(f'{prefix} {percent}% {suffix}')
 
+import filecmp
+
+def files_are_same(file_a, file_b):
+    # print(file_a + " vs " + file_b)
+    # print("files are different? : " + (str)(compare))
+    return filecmp.cmp(file_a, file_b)
     
 # Returns the path, parsing it if is a relative path.
 def relativePath (path):

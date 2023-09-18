@@ -11,15 +11,26 @@ from random import randint
 
 PROJECT_FILE = "project.json"
 
-VERSION = (1, 6, 2)
+VERSION = (1, 6, 3)
 EXENAME = "Pack-o-daemon"
+
+BFLAG_SKIPACSCOMP = 0
+BFLAG_MAKEVERSION = 1
+BFLAG_PACKPROJECT = 2
+BFLAG_BUILDNPLAY = 3
+BFLAG_SNAPSHOTVER = 4
+BFLAG_SKIPLOGBUILD = 5
+BFLAG_SKIPLOGPLAY = 6
+BFLAG_QUICKPLAY = 7
+BFLAG_HIDEACSSOURCE = 8
+BFLAG_CACHEACSLIBS = 9
 
 BUILD_FLAGS = [
     ["Skip ACS Comp", "Skips the ACS compilation process on each project part.\n" +
     "You could check this if you're only doing anything else than ACS scripting."],
     
-    ["Make Version", "Tagges all project part files with their specified version tags.\n" + 
-    "\nIf the pack project flag is activated, the zip file will be tagged too."
+    ["Make Version", "Tagges all project part files with their specified version tags.\n\n" + 
+    "If the pack project flag is activated, the zip file will be tagged too."
     "\nAnd when entering into the play mode, the tagged zips will be targeted to be played."],
     
     ["Pack Project", "All the outputted files will be packed up in a single zip. \n" + 
@@ -30,11 +41,21 @@ BUILD_FLAGS = [
     ["Snapshot Versioning", "If versioning is true.\n"+
     "Instead of using the config file tag relase, use a date-formatted tag.\n"],
 
-    ["Skip log after Build", "After a build, don't show the buildlog results."],
+    ["Skip log after Build", "After a build, don't show the build log results."],
 
     ["Skip log after Play", "After the sourceport is closed, don't show the gamelog results."],
 
-    ["Quick play", "When pressing the play button, skips the play dialog and runs the sourceport with the saved settings."]
+    ["Quick play", "When pressing the play button, skips the play dialog and runs the sourceport with the saved settings."],
+
+    ["Hide ACS Source", "Do not include the compilable ACS sources/libraries into the build."+
+     "\nThe files must be cached first, or at least execute the acs compilation at least once to work."],
+
+    ["Cache ACS Libraries", "When compiling ACS scripts, Pack-O-Daemon searchs for new libraries,\n" +
+                            "and that takes some time depending on how deep is your file structure\n" +
+                            "and how many libraries are referenced in your project.\n\n" +
+                            "This flag forces the Pack-O-Daemon to load the ACS libraries only once,\n" + 
+                            "and then, stop searching for new libraries in the future.\n\n" + 
+                            "Be mindful of this flag when referencing new libraries on ACS."]
 ]
 
 def make_default_json():
@@ -50,7 +71,8 @@ def make_default_json():
                 "acscomp"           : False,
                 "sourcedir"         : "src",
                 "distdir"           : "dist",
-                "notxt"             : False
+                "notxt"             : False,
+                "skipped"           : False
             }
         },
         "play_settings" : {

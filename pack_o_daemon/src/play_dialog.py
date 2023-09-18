@@ -122,8 +122,8 @@ class PlayDialog(wx.Dialog):
         self.UpdatePWADButtons()
         
     def SetUpPwads(self, parent, pwad_list):
-        versioned = parent.flags[1].GetValue()
-        snapshot = parent.flags[4].GetValue()
+        versioned = parent.flags[const.BFLAG_MAKEVERSION].GetValue()
+        snapshot = parent.flags[const.BFLAG_SNAPSHOTVER].GetValue()
         snapshot_tag = parent.snapshot_tag
         snapshot_tag_last = parent.snapshot_tag_last
         

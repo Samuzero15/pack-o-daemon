@@ -19,7 +19,7 @@ class ProjectPart():
         self.sourcedir      = const.ini_prop_projectparts("sourcedir",         "src",    name)
         self.distdir        = const.ini_prop_projectparts("distdir",           "dist",   name)
         self.notxt          = const.ini_prop_projectparts("notxt",               section=name)
-        self.skip           = False
+        self.skip           = const.ini_prop_projectparts("skipped",             section=name)
     
     
     def GetExpectedPWADS(self, versioned, snapshot, snapshot_tag):
@@ -74,7 +74,7 @@ class ProjectPart():
             self.PartMsg(thread, "ACS Compilation skipped")
         elif(compileacs):
             res = acscomp.acs_compile(thread, self)
-        print(res)
+        # print(res)
         # Check if the cancel button is called.
         if thread.abort or res == -1:
             if thread.abort:  fail_reason = br.BUILD_CANCELED

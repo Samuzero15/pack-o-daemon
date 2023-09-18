@@ -107,6 +107,7 @@ class Main(wx.Frame):
         self.response = -1
         self.snapshot_tag = const.get_snapshot_build_tag()
         self.snapshot_tag_last = self.snapshot_tag
+        self.acs_err_dialog = None
         
         self.CACOGIF_SPIN = Animation(utils.get_source_img("caco_spin.gif"))
         self.CACOGIF_FAIL = Animation(utils.get_source_img("caco_fail.gif"))
@@ -132,8 +133,9 @@ class Main(wx.Frame):
         self.log = []
         self.skip_parts = []
         skip_parts_labels = []
-        for part_lbl in self.projectparts:
-            skip_parts_labels.append("Skip " + part_lbl.name)
+        for part in self.projectparts:
+            skip_parts_labels.append("Skip " + part.name)
+            
         
         self.btn_build = wx.Button(self.panel,label="Build")
         self.btn_play = wx.Button(self.panel,label="Play")
@@ -207,26 +209,22 @@ class Main(wx.Frame):
     def _build_checkboxes(self, sizer, skip_parts_labels):
         sizer.Add(wx.StaticText(self.panel, label="Skip Build on..."), 0, wx.CENTER, 2)
         for i in range(0, len(skip_parts_labels)):
-            self.skip_parts.append(wx.CheckBox(self.panel, label=skip_parts_labels[i]))
+            checkbox = wx.CheckBox(self.panel, label=skip_parts_labels[i])
+            self.skip_parts.append(checkbox)
             sizer.Add(self.skip_parts[i], 0, wx.ALL, 2)
+        i = 0
+        for p in self.projectparts:
+            self.skip_parts[i].SetValue(p.skip)
+            i += 1
         
         build_flags = const.ini_prop("build_flags")
         for i in range(0, len(const.BUILD_FLAGS)):
             self.flags.append(wx.CheckBox(self.panel, label=const.BUILD_FLAGS[i][0]))
-            self.flags[i].SetToolTip(wx.ToolTip(const.BUILD_FLAGS[i][1]));
-            self.flags[i].SetValue(build_flags[i])
+            self.flags[i].SetToolTip(wx.ToolTip(const.BUILD_FLAGS[i][1]))
             self.flags[i].Hide()
-        
-        """
-        build_flags = const.ini_prop("build_flags")
-        sizer.Add(wx.StaticText(self.panel, label="Build Flags"), 0, wx.CENTER, 2)
-        for i in range(0, len(const.BUILD_FLAGS)):
-            tooltip = wx.ToolTip(const.BUILD_FLAGS[i][1])
-            self.flags.append(wx.CheckBox(self.panel, label=const.BUILD_FLAGS[i][0]))
-            self.flags[i].SetToolTip(tooltip);
-            sizer.Add(self.flags[i], 0, wx.ALL, 2)
-            self.flags[i].SetValue(build_flags[i])
-        """
+            if i in range(0, len(build_flags)):
+                self.flags[i].SetValue(build_flags[i])
+                
         return sizer
     
     def _build_buttons(self, sizer):
@@ -312,9 +310,9 @@ class Main(wx.Frame):
         self.cacodemon.SetAnimation(self.CACOGIF_SPIN)
         self.cacodemon.Play()
         self.response = -1
-        self.builder = None
+        # self.builder = None
         if self.builder is None:
-            if self.flags[1].GetValue() and self.flags[4].GetValue():
+            if self.flags[const.BFLAG_MAKEVERSION].GetValue() and self.flags[const.BFLAG_SNAPSHOTVER].GetValue():
                 self.snapshot_tag_last = self.snapshot_tag
                 self.snapshot_tag = const.get_snapshot_build_tag()
             index = 0
@@ -348,11 +346,13 @@ class Main(wx.Frame):
     
     def ReportResults(self, sucess):
         
-        noacs =     self.flags[0].GetValue()
-        versioned = self.flags[1].GetValue()
-        packed =    self.flags[2].GetValue()
-        play_it =   self.flags[3].GetValue()
-        snapshot =  self.flags[4].GetValue()
+        noacs =     self.flags[const.BFLAG_SKIPACSCOMP].GetValue()
+        versioned = self.flags[const.BFLAG_MAKEVERSION].GetValue()
+        packed =    self.flags[const.BFLAG_PACKPROJECT].GetValue()
+        play_it =   self.flags[const.BFLAG_BUILDNPLAY].GetValue()
+        snapshot =  self.flags[const.BFLAG_SNAPSHOTVER].GetValue()
+        cachedacs = self.flags[const.BFLAG_CACHEACSLIBS].GetValue()
+        acshide =   self.flags[const.BFLAG_HIDEACSSOURCE].GetValue()
         
         completed = sucess == thread.BUILD_SUCCESS
         failure = sucess == thread.BUILD_CANCELED or sucess == thread.BUILD_ERROR
@@ -372,7 +372,6 @@ class Main(wx.Frame):
                 nopart.append(part.skip) 
                 skip_a_part = True
             
-        
         result = ""
         title = ""
         notif_title = ""
@@ -415,7 +414,9 @@ class Main(wx.Frame):
             title += "\n -) Packed-up in file: " + zipfilename
         if(sucess == thread.BUILD_SKIPPED): title = "Build Interrupted. \nAll the project parts are skipped, unmark the skip flags and try again."
         if(play_it): title += "\n -) The project will run once you close this window."
-        
+        if(cachedacs): title += "\n -) ACS Compilation has been done with preloaded dependencies."
+        if(acshide): title += "\n -) ACS sources are not included in this build."
+
         title += "\nRead the log for more details."
 
         notif.SetMessage("Check all the details in the log.")
@@ -474,9 +475,9 @@ class Main(wx.Frame):
         # And to top it off, do a dialog!
         self.lastlog = [result[0], result[1]]
         self.builder = None
-        if (not self.flags[5].GetValue()):
+        if (not self.flags[const.BFLAG_SKIPLOGBUILD].GetValue()):
             rd.ResultDialog(self, result[0], result[1]).ShowModal()
-        if (self.flags[3].GetValue() and sucess == thread.BUILD_SUCCESS):
+        if (self.flags[const.BFLAG_BUILDNPLAY].GetValue() and sucess == thread.BUILD_SUCCESS):
             self.PlayNow(event)
         
 
@@ -486,13 +487,15 @@ class Main(wx.Frame):
         header = "The game closed \nHere it is the following output."
         self.lastlog = [header, event.data]
         
-        if (not self.flags[6].GetValue()):
+        if (not self.flags[const.BFLAG_SKIPLOGPLAY].GetValue()):
             rd.ResultDialog(self, header, event.data).ShowModal()
 
     def ACSErrorOutput(self, output):
-        self.response = -1
-        acs_err_dialog = rd.ACSErrorDialog(self,output)
-        acs_err_dialog.ShowModal()
+        if self.acs_err_dialog is None:
+            self.response = -1
+            self.acs_err_dialog = rd.ACSErrorDialog(self, output)
+            self.acs_err_dialog.ShowModal()
+            self.acs_err_dialog = None
         # acs_err_dialog.Destroy()
     
     
@@ -504,7 +507,7 @@ class Main(wx.Frame):
     def OnPlay(self, e):
         try:
             dialog = pd.PlayDialog(self, self.play_params)
-            if not self.flags[7].GetValue(): dialog.ShowModal()
+            if not self.flags[const.BFLAG_QUICKPLAY].GetValue(): dialog.ShowModal()
             else :                           dialog.OnPlay(e)
             self.play_params = dialog.GetCurrentSets()
         except Exception as e:

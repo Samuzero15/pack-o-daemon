@@ -1,5 +1,5 @@
-from pack_o_daemon.src.constants import VERSION
 from setuptools import setup, find_packages
+from pack_o_daemon.src.constants import VERSION
 
 VERSION_SETUP = (str)(VERSION[0]) + "." + (str)(VERSION[1]) + "." + (str)(VERSION[2])
 DESCRIPTION = 'A small asistant for your directory based doom projects.'
@@ -14,7 +14,7 @@ setup(
     long_description_content_type="executable",
     long_description=LONG_DESCRIPTION,
     packages=find_packages(),
-    package_data={"":["**/*.png","*.ico", "**/*.gif", "*.md", "LICENSE"]},
+    package_data={"":["**/*.png","*.ico", "**/*.gif", "*.md", "LICENSE", "changelog.md"]},
     install_requires=['altgraph', 'future', 'numpy', 'pefile', 'Pillow', 'six', 'wxPython', 'importlib.resources'],
     keywords=['python', 'doom', 'gui', 'modding'],
     classifiers=[

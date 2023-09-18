@@ -63,10 +63,10 @@ class BuildProject(threading.Thread):
         """Run Worker Thread."""
         
         # First for all, check the main flags
-        noacs = self.ui.flags[0].GetValue();
-        versioned = self.ui.flags[1].GetValue();
-        packed = self.ui.flags[2].GetValue();
-        snapshot = self.ui.flags[4].GetValue();
+        noacs = self.ui.flags[const.BFLAG_SKIPACSCOMP].GetValue();
+        versioned = self.ui.flags[const.BFLAG_MAKEVERSION].GetValue();
+        packed = self.ui.flags[const.BFLAG_PACKPROJECT].GetValue();
+        snapshot = self.ui.flags[const.BFLAG_SNAPSHOTVER].GetValue();
         
         
         # Make sure you're on the working directory where you will start the build.
