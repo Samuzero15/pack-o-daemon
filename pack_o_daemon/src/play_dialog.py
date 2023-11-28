@@ -6,10 +6,17 @@ import time
 import sys
 import subprocess
 import zipfile
-import pack_o_daemon.src.threads as thread
-import pack_o_daemon.src.funs_n_cons_2 as utils
-import pack_o_daemon.src.projectpart as part
-import pack_o_daemon.src.constants as const
+
+try:
+    import src.threads as thread
+    import src.funs_n_cons_2 as utils
+    import src.projectpart as part
+    import src.constants as const
+except ModuleNotFoundError: # If the module is not installed and running in the main repo.
+    import pack_o_daemon.src.threads as thread
+    import pack_o_daemon.src.funs_n_cons_2 as utils
+    import pack_o_daemon.src.projectpart as part
+    import pack_o_daemon.src.constants as const
 
 from configparser import ConfigParser
 
@@ -128,14 +135,14 @@ class PlayDialog(wx.Dialog):
         snapshot_tag_last = parent.snapshot_tag_last
         
         # Read the INI file, and get the required pwads.
-        pwads_before_json = const.ini_prop('pwads_before', section="play_settings")
+        pwads_before_json = const.ini_prop(const.JSON_PLAYSETS_PWADSBEFORE, section=const.JSON_PLAYSETS)
         pwads_before = []
         for path in pwads_before_json:
             filepath = utils.relativePath(path)
             if os.path.isfile(filepath):
                 pwads_before.append(filepath)
         
-        pwads_after_json = const.ini_prop('pwads_after', section="play_settings")
+        pwads_after_json = const.ini_prop(const.JSON_PLAYSETS_PWADSAFTER, section=const.JSON_PLAYSETS)
         pwads_after = []
         for path in pwads_after_json:
             filepath = utils.relativePath(path)
@@ -186,23 +193,23 @@ class PlayDialog(wx.Dialog):
         if play_params[0] != -1: 
             self.txt_sourceport.SetValue      (play_params[0])
         else:
-            self.txt_sourceport.SetValue      (const.ini_prop('sourceport_path', section="play_settings"))
+            self.txt_sourceport.SetValue      (const.ini_prop('sourceport_path', section=const.JSON_PLAYSETS))
         # Load the selected iwad
         if play_params[1] != -1: 
             self.txt_iwad.SetValue            (play_params[1])
         else:
-            self.txt_iwad.SetValue            (const.ini_prop('iwad_path', section="play_settings"))
+            self.txt_iwad.SetValue            (const.ini_prop(const.JSON_PLAYSETS_IWADPATH, section=const.JSON_PLAYSETS))
         
         # Load the specified map
         if len(play_params[2]) != 0: 
             self.txt_ctrl_map.SetValue              (play_params[2])
         else:
-            self.txt_ctrl_map.SetValue              (const.ini_prop('map', section="play_settings"))
+            self.txt_ctrl_map.SetValue              (const.ini_prop(const.JSON_PLAYSETS_MAP, section=const.JSON_PLAYSETS))
         # Load the extra parameters
         if len(play_params[3]) != 0: 
             self.txt_ctrl_params.SetValue           (play_params[3])
         else:
-            self.txt_ctrl_params.SetValue           (const.ini_prop('extra_params', section="play_settings"))
+            self.txt_ctrl_params.SetValue           (const.ini_prop(const.JSON_PLAYSETS_EXTRAPARAMS, section=const.JSON_PLAYSETS))
         # And load the pwads.
         if len(play_params[4]) != 0: 
             self.project_pwads = play_params[4]
@@ -240,10 +247,10 @@ class PlayDialog(wx.Dialog):
         with open(const.PROJECT_FILE, "r+") as jsonFile:
             data = json.load(jsonFile)
 
-            data["play_settings"]["sourceport_path"] = self.txt_sourceport.GetValue()
-            data["play_settings"]["iwad_path"] = self.txt_iwad.GetValue()
-            data["play_settings"]["map"] = self.txt_ctrl_map.GetValue()
-            data["play_settings"]["extra_params"] = self.txt_ctrl_params.GetValue()
+            data[const.JSON_PLAYSETS][const.JSON_PLAYSETS_SOURCEPORTPATH] = self.txt_sourceport.GetValue()
+            data[const.JSON_PLAYSETS][const.JSON_PLAYSETS_IWADPATH] = self.txt_iwad.GetValue()
+            data[const.JSON_PLAYSETS][const.JSON_PLAYSETS_MAP] = self.txt_ctrl_map.GetValue()
+            data[const.JSON_PLAYSETS][const.JSON_PLAYSETS_EXTRAPARAMS] = self.txt_ctrl_params.GetValue()
 
             jsonFile.seek(0)  # rewind
             json.dump(data, jsonFile, indent=4)

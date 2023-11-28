@@ -1,4 +1,14 @@
 # Packodaemon Changelog
+## v1.7.0 [UI Revamp, GDCC Support, extra stuff]
+	* The UI has been edited and compacted down in tabs for easier access to the different functions from the pack-o-daemon!
+	* The build flags can be saved in the project.json file for the next uses, using the Save Flag button!
+	* GDCC-ACC and GDCC-C is now supported! For the GDCC-C users, there are someextra settings under "acs_compilation" attribute of your project.json files in order to execute the respective compilers.
+	* Restart the program? Screw that, now the Config Dialog will update the settings acordingly!
+	* Log files are now added, view past logs any time!
+	* Now the "project_parts" attributes can be modified through the settings button!
+	* For the first time users, they will no longer need to restart the program. They will just be greet by the message and that's all, you're ready to go.
+	* Few fixes and error catching for some file reading functions.
+
 ## v1.6.3 [Some new build flags + Reorganization]
 	* Fixed the make.bat file for the windows builds.
 	* Updated Readme.md

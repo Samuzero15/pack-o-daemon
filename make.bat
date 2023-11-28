@@ -34,5 +34,4 @@ echo ========================================================
 echo. 
 echo You can go now. Happy dooming!
 echo. 
-"deactivate"
 pause

@@ -14,7 +14,8 @@ setup(
     long_description_content_type="executable",
     long_description=LONG_DESCRIPTION,
     packages=find_packages(),
-    package_data={"":["**/*.png","*.ico", "**/*.gif", "*.md", "LICENSE", "changelog.md"]},
+    package_data={"":["**/*.png","*.ico", "**/*.gif", "*.md", "LICENSE", "./changelog.md"]},
+    include_package_data=True,
     install_requires=['altgraph', 'future', 'numpy', 'pefile', 'Pillow', 'six', 'wxPython', 'importlib.resources'],
     keywords=['python', 'doom', 'gui', 'modding'],
     classifiers=[

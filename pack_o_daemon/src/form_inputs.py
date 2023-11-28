@@ -1,10 +1,15 @@
 import wx
 import os
-import pack_o_daemon.src.constants as const
-import pack_o_daemon.src.funs_n_cons_2 as utils
+
+try:
+    import src.constants as const
+    import src.funs_n_cons_2 as utils
+except ModuleNotFoundError: # If the module is not installed and running in the main repo.
+    import pack_o_daemon.src.constants as const
+    import pack_o_daemon.src.funs_n_cons_2 as utils
 
 class InputComboBox():
-    def __init__(self, panel, _label, json_entry, category="build_settings", _choices=[]):
+    def __init__(self, panel, _label, json_entry, category=const.JSON_BUILDSETS, _choices=[]):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.label = wx.StaticText(panel, label=_label)
         self.ctrl =  wx.ComboBox(panel, choices=_choices,style=wx.CB_READONLY|wx.CB_DROPDOWN)
@@ -17,7 +22,7 @@ class InputComboBox():
         return (self.json_entry, self.ctrl.GetValue())
 
 class InputText():
-    def __init__(self, panel, _label, json_entry, category="build_settings"):
+    def __init__(self, panel, _label, json_entry, category=const.JSON_BUILDSETS):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.label = wx.StaticText(panel, label=_label)
         self.ctrl = wx.TextCtrl(panel)
@@ -29,8 +34,58 @@ class InputText():
     def GetValue(self):
         return (self.json_entry, self.ctrl.GetValue())
 
+class InputCheckBox():
+    def __init__(self, panel, _label, json_entry, category=const.JSON_BUILDSETS):
+        self.sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.ctrl = wx.CheckBox(panel, label=_label)
+        self.json_entry = json_entry
+        self.ctrl.SetValue(const.ini_prop(json_entry, False, category))
+        self.sizer.Add(self.ctrl,0,wx.ALL | wx.EXPAND)
+    
+    def GetValue(self):
+        return (self.json_entry, self.ctrl.GetValue())
+
+class InputTextMultiline():
+    def __init__(self, panel, _label, json_entry, category=const.JSON_BUILDSETS):
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.label = wx.StaticText(panel, label=_label)
+        self.ctrl = wx.TextCtrl(panel, style=wx.TE_MULTILINE | wx.TE_WORDWRAP)
+        self.json_entry = json_entry
+        self.ctrl.SetValue(const.ini_prop(json_entry, "value", category))
+        self.sizer.Add(self.label,1,wx.ALL | wx.EXPAND)
+        self.sizer.Add(self.ctrl,4,wx.ALL | wx.EXPAND)
+    
+    def GetValue(self):
+        return (self.json_entry, self.ctrl.GetValue())
+
+class InputProjPartText():
+    def __init__(self, panel, _label, proj_part, json_prop, default):
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.label = wx.StaticText(panel, label=_label)
+        self.ctrl = wx.TextCtrl(panel)
+        self.json_entry = proj_part
+        self.json_prop = json_prop
+        self.ctrl.SetValue(const.ini_prop_projectparts(json_prop, default, section=proj_part))
+        self.sizer.Add(self.label,1,wx.ALL | wx.EXPAND)
+        self.sizer.Add(self.ctrl,0,wx.ALL | wx.EXPAND)
+    
+    def GetValue(self):
+        return (self.json_entry, self.json_prop, self.ctrl.GetValue())
+
+class InputProjPartCheckBox():
+    def __init__(self, panel, _label, proj_part, json_prop, default):
+        self.sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.ctrl = wx.CheckBox(panel, label=_label)
+        self.json_entry = proj_part
+        self.json_prop = json_prop
+        self.ctrl.SetValue(const.ini_prop_projectparts(json_prop, default, section=proj_part))
+        self.sizer.Add(self.ctrl,0,wx.ALL | wx.EXPAND)
+    
+    def GetValue(self):
+        return (self.json_entry, self.json_prop, self.ctrl.GetValue())
+
 class InputTextFile():
-    def __init__(self, panel, _label, json_entry, rootdir, wildcards, title, category="build_settings"):
+    def __init__(self, panel, _label, json_entry, rootdir, wildcards, title, category=const.JSON_BUILDSETS):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         hori_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.label = wx.StaticText(panel, label=_label)
@@ -60,14 +115,14 @@ class InputTextFile():
             filename = dialog.GetFilename()
             self.dirname = dialog.GetDirectory()
             if len(filename) != 0: 
-                self.ctrl.SetValue(self.dirname + os.path.sep)
+                self.ctrl.SetValue(self.dirname + os.path.sep + filename)
         dialog.Destroy()
 
     def GetValue(self):
         return (self.json_entry, self.ctrl.GetValue())
 
 class InputTextDir():
-    def __init__(self, panel, _label, json_entry, rootdir, title, category="build_settings"):
+    def __init__(self, panel, _label, json_entry, rootdir, title, category=const.JSON_BUILDSETS):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         hori_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.label = wx.StaticText(panel, label=_label)
@@ -101,7 +156,7 @@ class InputTextDir():
         return (self.json_entry, self.ctrl.GetValue())
 
 class InputList():
-    def __init__(self, panel, _label, json_entry, items=None, category="build_settings"):
+    def __init__(self, panel, _label, json_entry, items=None, category=const.JSON_BUILDSETS):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         hori_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.label = wx.StaticText(panel, label=_label)
@@ -153,7 +208,7 @@ class InputList():
         return (self.json_entry, self.items)
 
 class InputListFile():
-    def __init__(self, panel, _label, rootdir, wildcards, title, json_entry, category="build_settings"):
+    def __init__(self, panel, _label, rootdir, wildcards, title, json_entry, category=const.JSON_BUILDSETS):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         h_s = wx.BoxSizer(wx.HORIZONTAL)
         buttons_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -206,6 +261,58 @@ class InputListFile():
     
     def GetValue(self):
         return (self.json_entry, self.items)
+    
+class InputListDir():
+    def __init__(self, panel, _label, rootdir, title, json_entry, category=const.JSON_BUILDSETS):
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        h_s = wx.BoxSizer(wx.VERTICAL)
+        buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.label = wx.StaticText(panel, label=_label)
+        self.btn_add = wx.Button(panel)
+        self.btn_remove = wx.Button(panel)
+        self.list = wx.ListBox(panel, style=wx.LB_MULTIPLE | wx.LB_HSCROLL,size=wx.Size(200, 100))
+        self.panel = panel
+        self.json_entry = json_entry
+        self.items = const.ini_prop(json_entry, [], category)
+        self.dirname = rootdir
+        self.title = title
+
+        for i in range(0, len(self.items)):
+            self.list.Append(self.items[i])
+
+        self.btn_add.SetBitmap(wx.Bitmap(utils.get_source_img("pwad_add.png")))
+        self.btn_add.SetToolTip("Add")
+        self.btn_remove.SetBitmap(wx.Bitmap(utils.get_source_img("pwad_remove.png")))
+        self.btn_remove.SetToolTip("Remove")
+
+        buttons_sizer.Add(self.btn_add,0,wx.ALL | wx.EXPAND)
+        buttons_sizer.Add(self.btn_remove,0,wx.ALL | wx.EXPAND)
+
+        h_s.Add(self.list, 3, wx.ALL | wx.EXPAND)
+        h_s.Add(buttons_sizer, 1, wx.ALL | wx.EXPAND | wx.CENTER)
+
+        self.sizer.Add(self.label,0,wx.ALL | wx.EXPAND)
+        self.sizer.Add(h_s, 2, wx.ALL | wx.EXPAND | wx.CENTER)
+
+        panel.Bind(wx.EVT_BUTTON, self.OnAdd, self.btn_add)
+        panel.Bind(wx.EVT_BUTTON, self.OnRemove, self.btn_remove)
+    
+    def OnAdd(self, e):
+        dialog = wx.DirDialog(self.panel, self.title, self.dirname, wx.DD_DEFAULT_STYLE)
+        if dialog.ShowModal() == wx.ID_OK:
+            if len(dialog.GetPath()) != 0: 
+                self.items.append(dialog.GetPath())
+                self.list.Append(dialog.GetPath())
+        dialog.Destroy()
+
+    def OnRemove(self, e):
+        delete = [i for i in self.list.GetSelections() if self.list.IsSelected(i)]
+        for i in reversed(delete):
+            del self.items[i]
+            self.list.Delete(i)
+    
+    def GetValue(self):
+        return (self.json_entry, self.items)
 
 class StringReplacerEntry():
     def __init__(self, string, type, content, oneline):
@@ -218,7 +325,7 @@ class StringReplacerEntry():
         return [self.string, self.type, self.content, self.oneline]
     
     def toJSON(self):
-        return (self.string, { "type" : self.type, "content": self.content, "oneline": self.oneline})
+        return (self.string, { const.JSON_BUILDSETS_STRREP_STR2REP_TYPE : self.type, const.JSON_BUILDSETS_STRREP_STR2REP_CONTENT: self.content, const.JSON_BUILDSETS_STRREP_STR2REP_ONELINE: self.oneline})
 
 class InputList_StringReplacer():
     def __init__(self, panel, _label, items=[]):
@@ -230,7 +337,7 @@ class InputList_StringReplacer():
         self.btn_save = wx.Button(panel)
         self.list = wx.ListCtrl(panel, style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
         self.panel = panel
-        self.json_entry = "strings_to_replace"
+        self.json_entry = const.JSON_BUILDSETS_STRREP_STR2REP
         self.items = items
 
         self.list.InsertColumn(0, "String")

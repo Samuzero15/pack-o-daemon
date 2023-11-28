@@ -11,11 +11,17 @@ import datetime
 import subprocess
 import wx
 from configparser import ConfigParser
-import pack_o_daemon.src.constants as const
-import pack_o_daemon.src.threads as thr
-from pack_o_daemon.src.acs_comp import get_acs_allfilenames_to_compile
 from glob import iglob
 from shutil import copyfile
+
+try:
+    import src.constants as const
+    import src.threads as thr
+    from src.acs_comp import get_acs_allfilenames_to_compile
+except ModuleNotFoundError:
+    import pack_o_daemon.src.constants as const
+    import pack_o_daemon.src.threads as thr
+    from pack_o_daemon.src.acs_comp import get_acs_allfilenames_to_compile
 
 def process_msg(builder, msg):
     #builder.ui.AddToLog(msg, 2)
@@ -51,7 +57,7 @@ def makepkg(builder, sourcePath, destPath, notxt=False, skipVariableTexts=False)
         process_msg(builder, "There is no files to zip!\nAre you sure you setted the directory name correctly for {0}?.".format(destination))
         return None
     
-    compress_type = str(const.ini_prop("zip_compress_type")).lower()
+    compress_type = str(const.ini_prop(const.JSON_BUILDSETS_ZIPCOMPRESSTYPE)).lower()
     compress_type_str = ""
     
     if compress_type == "bzip2":          compress_type = zipfile.ZIP_BZIP2; compress_type_str="BZip2"
@@ -70,7 +76,7 @@ def makepkg(builder, sourcePath, destPath, notxt=False, skipVariableTexts=False)
         printProgress (builder, current, len(filelist), 'Zipped: ', 'files. (' + file[1] + ')')
         current += 1
     
-    additional_files = const.ini_prop("build_add_files")
+    additional_files = const.ini_prop(const.JSON_BUILDSETS_BUILDADDFILES)
     current = 1
     process_msg(builder, "Adding the extra files. {0} extra files to be added.".format(len(additional_files)))
     for file in additional_files:
@@ -113,7 +119,7 @@ def file_ignore(builder, file):
 # Return if this file is a placeholding file.
 def file_placeholder(file):
     should_ignore = False
-    for f in const.ini_prop("string_replacer")["files_to_replace"]:
+    for f in const.ini_prop(const.JSON_BUILDSETS_STRREP)[const.JSON_BUILDSETS_STRREP_FILESTOREPLACE]:
         if not (should_ignore): should_ignore = (file == f)
         else: break
     return should_ignore
@@ -142,7 +148,7 @@ def make_dist_version(builder, zip, rootDir, sourceDir, destPath, relase, notxt)
         #if(os.path.isfile(os.path.join(sourceDir, 'buildinfo.txt'))):
             # Get all writeable files and replace them with the version and time.
             # process_msg(builder, "buildinfo.txt found, making up distribution version.")
-        variable_files = const.ini_prop("string_replacer")["files_to_replace"]
+        variable_files = const.ini_prop(const.JSON_BUILDSETS_STRREP)[const.JSON_BUILDSETS_STRREP_FILESTOREPLACE]
         for file in variable_files:
             if builder.abort or res == -1: return -1
             source = sourceDir
@@ -169,14 +175,15 @@ def maketxt(builder, sourcePath, destPath, version, filetemplate):
     destname = destPath + ".txt"
     
     aborted = False
-    strings_to_replace = const.ini_prop("string_replacer")["strings_to_replace"]
+    strings_to_replace = const.ini_prop(const.JSON_BUILDSETS_STRREP)[const.JSON_BUILDSETS_STRREP_STR2REP]
     
     #print(strings_to_replace)
     # Check the string replacer keys in case of file types. And notifies the user if the path from one of them is missing.
     for key, value in strings_to_replace.items():
         if builder.abort: aborted == True; break
-        if value["type"] == "file" and not os.path.isfile(relativePath(value["content"])):
-            process_msg (builder, "(String Repleacer) File '{0}' not found.".format(relativePath(value["content"])))
+        if value[const.JSON_BUILDSETS_STRREP_STR2REP_TYPE] == "file" and not os.path.isfile(relativePath(value[const.JSON_BUILDSETS_STRREP_STR2REP_CONTENT])):
+            process_msg (builder, "(String Repleacer) File '{0}' not found.".format(relativePath(value[const.JSON_BUILDSETS_STRREP_STR2REP_CONTENT])))
+            wx.MessageDialog(builder.ui, "The file '" + relativePath(value[const.JSON_BUILDSETS_STRREP_STR2REP_CONTENT]) + "' is missing!\n\n The string replacement will be skipped for the key: '" + key + "'", "Oh noes!").ShowModal()
 
     sourcefile = open (textname, "rt")
     textfile = open (destname, "wt")
@@ -184,29 +191,29 @@ def maketxt(builder, sourcePath, destPath, version, filetemplate):
         if builder.abort: aborted == True; break
         for key, value in strings_to_replace.items():
             if builder.abort: aborted == True; break
-            if value["type"] == "tag":
+            if value[const.JSON_BUILDSETS_STRREP_STR2REP_TYPE] == "tag":
                 line = line.replace(key, version)
-            elif value["type"] == "file":
+            elif value[const.JSON_BUILDSETS_STRREP_STR2REP_TYPE] == "file" and os.path.isfile(relativePath(value[const.JSON_BUILDSETS_STRREP_STR2REP_CONTENT])):
                 try:
-                    file_to_copy = open (relativePath(value["content"]), "rt")
+                    file_to_copy = open (relativePath(value[const.JSON_BUILDSETS_STRREP_STR2REP_CONTENT]), "rt")
                     content = file_to_copy.read()
-                    if value["oneline"] is not None and value["oneline"] == True:
+                    if value[const.JSON_BUILDSETS_STRREP_STR2REP_ONELINE] is not None and value[const.JSON_BUILDSETS_STRREP_STR2REP_ONELINE] == True:
                         content = format_singleline (content)
                     line = line.replace(key, content)
                     file_to_copy.close()
                 except Exception as e:
                     dlg = wx.MessageDialog(None, "Something went wrong!\n" +"\n"+ traceback.format_exc(), "Ah shiet!").ShowModal()
                     
-            elif value["type"] == "date":
-                line = line.replace(key, datetime.datetime.now().strftime(value["content"]))
+            elif value[const.JSON_BUILDSETS_STRREP_STR2REP_TYPE] == "date":
+                line = line.replace(key, datetime.datetime.now().strftime(value[const.JSON_BUILDSETS_STRREP_STR2REP_CONTENT]))
             else:
-                line = line.replace(key, value["content"])
+                line = line.replace(key, value[const.JSON_BUILDSETS_STRREP_STR2REP_CONTENT])
         textfile.write(line)
     textfile.close()
     sourcefile.close()
     # print("write in file: " + destname)
-    # print(key, value["type"], value["content"])
-    #line = line.replace(key, value["content"])
+    # print(key, value[const.JSON_BUILDSETS_STRREP_STR2REP_TYPE], value[const.JSON_BUILDSETS_STRREP_STR2REP_CONTENT])
+    #line = line.replace(key, value[const.JSON_BUILDSETS_STRREP_STR2REP_CONTENT])
     
     return 0 + -1*aborted
 

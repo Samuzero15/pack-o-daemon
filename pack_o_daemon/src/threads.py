@@ -4,10 +4,17 @@ import os
 import threading
 import subprocess
 import time
-import pack_o_daemon.src.funs_n_cons_2 as utils
-import pack_o_daemon.src.result_dialog as rd
+
 import zipfile
-import pack_o_daemon.src.constants as const
+
+try:
+    import src.funs_n_cons_2 as utils
+    import src.result_dialog as rd
+    import src.constants as const
+except ModuleNotFoundError: # If the module is not installed and running in the main repo.
+    import pack_o_daemon.src.funs_n_cons_2 as utils
+    import pack_o_daemon.src.result_dialog as rd
+    import pack_o_daemon.src.constants as const
 
 # Define notification event for thread completion
 EVT_BUILDRESULT_ID = wx.NewId()
@@ -106,10 +113,10 @@ class BuildProject(threading.Thread):
             
             os.chdir(rootdir)
             
-            distDir  = const.ini_prop('zip_dir',  'dist\packed');
-            filename = const.ini_prop('name', 'project');
+            distDir  = const.ini_prop(const.JSON_BUILDSETS_ZIPDIR,  'dist\packed');
+            filename = const.ini_prop(const.JSON_BUILDSETS_NAME, 'project');
 
-            distDir = os.path.join(const.ini_prop('build_dir',  rootdir), distDir)
+            distDir = os.path.join(const.ini_prop(const.JSON_BUILDSETS_BUILDDIR,  rootdir), distDir)
             
             if not os.path.exists(distDir):
                 os.mkdir(distDir)
@@ -119,7 +126,7 @@ class BuildProject(threading.Thread):
                     
             if versioned: 
                 if snapshot : filename += "_" + self.ui.snapshot_tag + '.zip'
-                else        : filename += "_" + const.ini_prop('tag','v0') + '.zip'
+                else        : filename += "_" + const.ini_prop(const.JSON_BUILDSETS_TAG,'v0') + '.zip'
             else        : filename += "_" + "DEV" + '.zip'
             
             

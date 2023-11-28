@@ -28,7 +28,7 @@ Literally just clicks away before playing your project.
 * For the people who likes to work in their local directory using the file explorer.
 * Allows you to use third party programs directly. (Audacity, Photoshop, Notepad++, Sublime Text, you name it)
 * Smack some git repository in there to save your progress in your project.
-* You like Slade, but you're kind of alergic to the text editor, or, yo find tedious to re-compile every acs file, everytime you make a change.
+* You like Slade, but you're kind of alergic to the text editor, or, you find tedious to re-compile every acs file, everytime you make a change.
 
 #### How to use it?
 1. Get the pack-o-daemon.exe, and place it on your root folder. (where the doom project resides)
@@ -42,6 +42,8 @@ Literally just clicks away before playing your project.
 3. Open pack-o-daemon.exe again, and everything should be set for the typical use.
 
 If you change something from the project.ini file, and you have the executable running, restart it.
+
+### [Here it is a link to the wiki of this project](https://github.com/Samuzero15/pack-o-daemon/wiki) if you don't know how to use this tool!
 
 #### Hm... I want to build the source code, how can I do that?
 1. Pack-O-Daemon uses the power of **Python 3.8.5**, so get that version or better.
@@ -60,14 +62,14 @@ If you change something from the project.ini file, and you have the executable r
 
 	> * To build a package for pip, ```python setup.py sdist bdist_wheel```. (Recommended for windows and Linux users)
 	
-	> * To run it you should install the package with, ```pip install --upgrade .``` or ```pip install --upgrade pack-o-daemon``` on the base directory, once built, type ```pack_o_daemon``` on the terminal.
+	> * To test the package, I've made a bat for that, run ```test_wheel.bat``` (or ```test_wheel.sh```) and give it a try.
+
+	> * To run the current source code, run ```python main.py```
 
 You can use any text editor if you wish.
 
 #### Frequently Asked Questions
 > No questions yet...
-
-### [Here it is a link to the wiki of this project](https://github.com/Samuzero15/pack-o-daemon/wiki) if you don't know how to use this tool!
 
 Also on
 * [Doomworld](https://www.doomworld.com/forum/topic/139937-pack-o-daemon-a-helper-for-your-dooms-directory-pk3-mod)
@@ -75,7 +77,7 @@ Also on
 * [Itch.Io](https://samuzero15.itch.io/pack-o-daemon)
 
 #### Thanks to
-* **sirjuddington** For the slade's acs compiler source code
+* **sirjuddington** For the slade's ACS compiler source code
 * **Xaser** For the base code of his package builder for the eriguns doom mods.
 * **AdmiralKosnov** For changing the name. The last one sounded more of a fudge packer. 
 * **TDRR** For guiding me on how tf I set a linux enviroment for testing. Without him, this tool would be in Windows only :), also for the Execute button.

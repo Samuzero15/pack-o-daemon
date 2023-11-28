@@ -1,7 +1,11 @@
 
 import json
 import wx
-import pack_o_daemon.src.constants as const
+
+try:
+    import src.constants as const
+except ModuleNotFoundError: # If the module is not installed and running in the main repo.
+    import pack_o_daemon.src.constants as const
 
 command_data = []
 
@@ -26,8 +30,13 @@ class ExecuteDialog(wx.Dialog):
         f = open(const.PROJECT_FILE, "r")
         project_json = json.load(f)
         f.close()
-        for cmd in project_json["cmd_execute"]:
-            self.listcmd.Append([cmd["name"], cmd["cmd"]])
+
+        try:
+            if(not len(project_json[const.JSON_CMDEXE]) == 0):
+                for cmd in project_json[const.JSON_CMDEXE]:
+                    self.listcmd.Append([cmd[const.JSON_CMDEXE_NAME], cmd[const.JSON_CMDEXE_CMD]])
+        except KeyError:
+            pass
 
         btns_sizer.Add(btn_add, 1, wx.CENTER, 0)
         btns_sizer.Add(btn_remove, 1, wx.CENTER, 0)
@@ -62,14 +71,14 @@ class ExecuteDialog(wx.Dialog):
     def OnSave(self, event):
         json_cmd_list = []
         for i in range(0, self.listcmd.GetItemCount()):
-            json_cmd = {"name" : self.listcmd.GetItem(i, 0).GetText(), "cmd" : self.listcmd.GetItem(i, 1).GetText()}
+            json_cmd = {const.JSON_CMDEXE_NAME : self.listcmd.GetItem(i, 0).GetText(), const.JSON_CMDEXE_CMD : self.listcmd.GetItem(i, 1).GetText()}
             json_cmd_list.append(json_cmd)
         
         f = open(const.PROJECT_FILE, "r")
         project_json = json.load(f)
         f.close()
 
-        project_json["cmd_execute"] = json_cmd_list
+        project_json[const.JSON_CMDEXE] = json_cmd_list
 
         f = open(const.PROJECT_FILE, "w")
         json.dump(project_json, f, indent=4)
@@ -85,13 +94,13 @@ class ExecuteDialog(wx.Dialog):
     
 class ExecuteDialog_AddCommand(wx.Dialog):
     def __init__(self, parent):
-        wx.Dialog.__init__(self, parent, title="Add a new Execute command", size=(560, 200))
+        wx.Dialog.__init__(self, parent, title="Add a new Execute command", size=(320, 250))
         self.parent = parent
         # self.panel = wx.Panel(self, size=(300, 300))
         main_cont = wx.BoxSizer(wx.VERTICAL)
         cont = wx.BoxSizer(wx.VERTICAL)
-        self.txt_name = wx.TextCtrl(self, size=(500, 25))
-        self.txt_cmd = wx.TextCtrl(self, size=(500, 25))
+        self.txt_name = wx.TextCtrl(self, size=(200, 25))
+        self.txt_cmd = wx.TextCtrl(self, size=(200, 100), style=wx.TE_MULTILINE | wx.TE_WORDWRAP)
         btn_add = wx.Button(self, label="Add Command")
 
         self.Bind(wx.EVT_BUTTON, self.OnAdd, btn_add)
@@ -100,8 +109,8 @@ class ExecuteDialog_AddCommand(wx.Dialog):
         cont.Add(self.txt_name, 1, wx.CENTER | wx.LEFT | wx.RIGHT, 5)
         cont.Add(wx.StaticText(self,label="CMD"), 1, wx.CENTER | wx.LEFT | wx.RIGHT | wx.EXPAND, 5)
         cont.Add(self.txt_cmd, 1, wx.CENTER | wx.LEFT | wx.RIGHT, 5)
-        cont.Add(btn_add, 2, wx.CENTER | wx.LEFT | wx.RIGHT | wx.EXPAND, 10)
-        self.SetSizerAndFit(cont)
+        cont.Add(btn_add, 2, wx.CENTER | wx.LEFT | wx.RIGHT, 10)
+        self.SetSizer(cont)
     	
     	
     def OnAdd(self, event):

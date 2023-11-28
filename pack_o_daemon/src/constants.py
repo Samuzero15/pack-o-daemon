@@ -4,14 +4,18 @@ import datetime
 import traceback
 import wx
 
-import pack_o_daemon.src.projectpart as part
+try:
+    import src.projectpart as part
+except ModuleNotFoundError: # If the module is not installed and running in the main repo.
+    import pack_o_daemon.src.projectpart as part
+    
 from configparser import ConfigParser
 from random import randint
 
 
 PROJECT_FILE = "project.json"
 
-VERSION = (1, 6, 3)
+VERSION = (1, 7, 0)
 EXENAME = "Pack-o-daemon"
 
 BFLAG_SKIPACSCOMP = 0
@@ -58,75 +62,125 @@ BUILD_FLAGS = [
                             "Be mindful of this flag when referencing new libraries on ACS."]
 ]
 
+JSON_PROJPARTS = "project_parts"
+JSON_PROJPARTS_RELEASE = "release"
+JSON_PROJPARTS_FILENAME = "filename"
+JSON_PROJPARTS_ACSCOMP = "acscomp"
+JSON_PROJPARTS_SOURCEDIR = "sourcedir"
+JSON_PROJPARTS_DISTDIR = "distdir"
+JSON_PROJPARTS_NOTXT = "notxt"
+JSON_PROJPARTS_SKIPPED = "skipped"
+
+JSON_PLAYSETS = "play_settings"
+JSON_PLAYSETS_SOURCEPORTPATH = "sourceport_path"
+JSON_PLAYSETS_PWADSBEFORE = "pwads_before"
+JSON_PLAYSETS_PWADSAFTER = "pwads_after"
+JSON_PLAYSETS_IWADPATH = "iwad_path"
+JSON_PLAYSETS_MAP = "map"
+JSON_PLAYSETS_EXTRAPARAMS = "extra_params"
+
+JSON_BUILDSETS = "build_settings"
+JSON_BUILDSETS_NAME = "name"
+JSON_BUILDSETS_TAG = "tag"
+JSON_BUILDSETS_ZIPDIR = "zip_dir"
+JSON_BUILDSETS_ZIPCOMPRESSTYPE = "zip_compress_type"
+JSON_BUILDSETS_BUILDSKIPFILES = "build_skip_files"
+JSON_BUILDSETS_BUILDDIR = "build_dir"
+JSON_BUILDSETS_BUILDADDFILES = "build_add_files"
+JSON_BUILDSETS_BUILDFLAGS = "build_flags"
+JSON_BUILDSETS_STRREP = "string_replacer"
+JSON_BUILDSETS_STRREP_FILESTOREPLACE = "files_to_replace"
+JSON_BUILDSETS_STRREP_STR2REP = "strings_to_replace"
+JSON_BUILDSETS_STRREP_STR2REP_TYPE = "type"
+JSON_BUILDSETS_STRREP_STR2REP_CONTENT = "content"
+JSON_BUILDSETS_STRREP_STR2REP_ONELINE = "oneline"
+
+JSON_ACSCOMP = "acs_compilation"
+JSON_ACSCOMP_TYPE = "type"
+JSON_ACSCOMP_EXECUTEABLE = "executeable"
+JSON_ACSCOMP_GDCCLINKER = "gdcc-linker_exe"
+JSON_ACSCOMP_GDCCMAKELIBS = "gdcc-make_libs"
+JSON_ACSCOMP_GDCCMAINLIB =  "gdcc-mainlib_name"
+JSON_ACSCOMP_EXTRAPARAMS = "extra_params"
+JSON_ACSCOMP_LIBRARYDIRS =  "library_dirs"
+
+JSON_CMDEXE         = "cmd_execute" 
+JSON_CMDEXE_NAME    = "name"
+JSON_CMDEXE_CMD     = "cmd"
+
 def make_default_json():
     flag_default_values = []
     for i in range(0, len(BUILD_FLAGS)):
         flag_default_values.append(False)
 
     json_data = {
-        "project_parts" : {
+        JSON_PROJPARTS : {
             "Source" : {
-                "release"            : "v0",
-                "filename"          : "my_mod",
-                "acscomp"           : False,
-                "sourcedir"         : "src",
-                "distdir"           : "dist",
-                "notxt"             : False,
-                "skipped"           : False
+                JSON_PROJPARTS_RELEASE            : "v0",
+                JSON_PROJPARTS_FILENAME          : "my_mod",
+                JSON_PROJPARTS_ACSCOMP           : False,
+                JSON_PROJPARTS_SOURCEDIR         : "src",
+                JSON_PROJPARTS_DISTDIR          : "dist",
+                JSON_PROJPARTS_NOTXT             : False,
+                JSON_PROJPARTS_SKIPPED           : False
             }
         },
-        "play_settings" : {
-            "sourceport_path" : "",
-            "pwads_before" : [],
-            "pwads_after" : [],
-            "iwad_path" : "",
-            "map" : "MAP01",
-            "extra_params" : ""
+        JSON_PLAYSETS : {
+            JSON_PLAYSETS_SOURCEPORTPATH    : "",
+            JSON_PLAYSETS_PWADSBEFORE       : [],
+            JSON_PLAYSETS_PWADSAFTER        : [],
+            JSON_PLAYSETS_IWADPATH          : "",
+            JSON_PLAYSETS_MAP               : "MAP01",
+            JSON_PLAYSETS_EXTRAPARAMS       : ""
         }, 
-        "build_settings" : {
-            "name" : "my_project",
-            "tag" : "v0",
-            "zip_dir":   "dist\packed",
-            "zip_compress_type": "",
-            "build_skip_files" : [ ".backup1", ".backup2", ".backup3", ".bak", ".dbs"],
-            "build_dir" : "",
-            "build_add_files" : [],
-            "build_flags": flag_default_values,
-            "string_replacer" : {
-                "files_to_replace" : [
+        JSON_BUILDSETS : {
+            JSON_BUILDSETS_NAME : "my_project",
+            JSON_BUILDSETS_TAG : "v0",
+            JSON_BUILDSETS_ZIPDIR:   "dist\packed",
+            JSON_BUILDSETS_ZIPCOMPRESSTYPE: "",
+            JSON_BUILDSETS_BUILDSKIPFILES : [ ".backup1", ".backup2", ".backup3", ".bak", ".dbs"],
+            JSON_BUILDSETS_BUILDDIR : "",
+            JSON_BUILDSETS_BUILDADDFILES : [],
+            JSON_BUILDSETS_BUILDFLAGS : flag_default_values,
+            JSON_BUILDSETS_STRREP : {
+                JSON_BUILDSETS_STRREP_FILESTOREPLACE : [
                     "Language.txt", 
                     "GAMEINFO.txt", 
                     "changelog.md", 
                     "buildinfo.txt"
                 ],
-                "strings_to_replace": {
+                JSON_BUILDSETS_STRREP_STR2REP : {
                     "_DEV_": {
-                        "type": "tag",
-                        "content": "",
-                        "oneline": False
+                        JSON_BUILDSETS_STRREP_STR2REP_TYPE: "tag",
+                        JSON_BUILDSETS_STRREP_STR2REP_CONTENT: "",
+                        JSON_BUILDSETS_STRREP_STR2REP_ONELINE: False
                     },
                     "_FILE_": {
-                        "type": "file",
-                        "content": "..\\path\\to\\file.txt",
-                        "oneline": False
+                        JSON_BUILDSETS_STRREP_STR2REP_TYPE: "file",
+                        JSON_BUILDSETS_STRREP_STR2REP_CONTENT: "..\\path\\to\\file.txt",
+                        JSON_BUILDSETS_STRREP_STR2REP_ONELINE: False
                     },
                     "XX/XX/XXXX": {
-                        "type": "date",
-                        "content": "%d/%m/%Y",
-                        "oneline": False
+                        JSON_BUILDSETS_STRREP_STR2REP_TYPE: "date",
+                        JSON_BUILDSETS_STRREP_STR2REP_CONTENT: "%d/%m/%Y",
+                        JSON_BUILDSETS_STRREP_STR2REP_ONELINE: False
                     }
                 }
             }
         },
-        "acs_compilation" : {
-            "type": "acc",
-            "executeable": "acc.exe",
-            "extra_params" : ""
+        JSON_ACSCOMP : {
+            JSON_ACSCOMP_TYPE: "acc",
+            JSON_ACSCOMP_EXECUTEABLE: "acc.exe",
+            JSON_ACSCOMP_GDCCLINKER : "gdcc-ld.exe",
+            JSON_ACSCOMP_GDCCMAKELIBS : True,
+            JSON_ACSCOMP_GDCCMAINLIB : "project",
+            JSON_ACSCOMP_EXTRAPARAMS : "",
+            JSON_ACSCOMP_LIBRARYDIRS : []
         },
-        "cmd_execute" : [
+        JSON_CMDEXE : [
 			{
-				"name":"test",
-				"cmd":"echo 'hello world'"
+				JSON_CMDEXE_NAME :"test",
+				JSON_CMDEXE_CMD :"echo 'hello world'"
 			}
 		]
         
@@ -139,7 +193,7 @@ def make_default_json():
         outfile.write(json_object)
 
 # Defaults to the project section.
-def ini_prop(what, default=None, section="build_settings"):
+def ini_prop(what, default=None, section=JSON_BUILDSETS):
     ## data_conf = load_stuff()[0]
     setting = CONFIG_DATA[section].get(what, default)
     # print(setting)
@@ -147,21 +201,24 @@ def ini_prop(what, default=None, section="build_settings"):
 
 def ini_prop_projectparts(what, default=None, section="Source"):
     ## data_conf = load_stuff()[0]
-    setting = CONFIG_DATA["project_parts"][section].get(what, default)
+    try:
+        setting = CONFIG_DATA[JSON_PROJPARTS][section].get(what, default)
+    except KeyError:
+        setting = default
     return setting
 
 
 # Read all sections
 def read_parts(rootDir=os.getcwd()):
     project_parts = []
-    build_dir = ini_prop("build_dir", section="build_settings")
+    build_dir = ini_prop(JSON_BUILDSETS_BUILDDIR, section=JSON_BUILDSETS)
     project_dir = None
     if(len(build_dir) != 0):
         project_dir = os.path.join(rootDir, build_dir)
     else:
         project_dir = rootDir
     
-    for p in CONFIG_DATA["project_parts"]:
+    for p in CONFIG_DATA[JSON_PROJPARTS]:
         project_parts.append(part.ProjectPart(p, project_dir))
     return project_parts
 
@@ -208,7 +265,7 @@ def get_version():
     return  EXENAME + " - Ver. " + str(VERSION[0]) + "." + str(VERSION[1]) + "." + str(VERSION[2])
 
 def get_skip_filetypes():
-    return ini_prop("build_skip_files", "")
+    return ini_prop(JSON_BUILDSETS_BUILDSKIPFILES, "")
 
 def load_stuff():
     first_time = False

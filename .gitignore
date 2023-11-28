@@ -9,3 +9,4 @@ env/
 env32/
 envw7/
 *.egg-info
+.vscode/

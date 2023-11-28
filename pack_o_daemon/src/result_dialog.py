@@ -1,24 +1,28 @@
 import os
 import wx
 import wx.stc as stc
-import pack_o_daemon.src.constants as c
+import datetime
+try:
+    import src.constants as c
+except ModuleNotFoundError: # If the module is not installed and running in the main repo.
+    import pack_o_daemon.src.constants as c
 
 class ResultDialog(wx.Dialog):
-    def __init__(self, parent, header, results, _title="Results"):
+    def __init__(self, parent, header, results, filename="pack-o-daemon_log.txt", _title="Results", ):
         wx.Dialog.__init__(self, parent, title=_title, size=(450, 500))
         self.Centre()
         
         cont = wx.BoxSizer(wx.VERTICAL)
         cont_btn = wx.BoxSizer(wx.HORIZONTAL)
         
-        panel = wx.Panel(self);
+        panel = wx.Panel(self)
         label = wx.StaticText(panel, label=header)
         self.txt = stc.StyledTextCtrl(panel)
         btn = wx.Button(panel, label=c.get_accept_msg())
         btn_copy = wx.Button(panel, label="Copy to clipboard")
         btn_save = wx.Button(panel, label="Save to File")
         self.wrap = wx.CheckBox(panel, label="W. Wrap")
-        
+        self.filename = filename
         self.txt.SetText(results)
         self.txt.SetReadOnly(True)
         font = wx.Font(8, wx.MODERN, wx.NORMAL, wx.NORMAL, False, u'Consolas')
@@ -38,6 +42,13 @@ class ResultDialog(wx.Dialog):
         cont.Add(self.wrap, 0, wx.ALL | wx.CENTER, 1)
         cont.Add(cont_btn, 0, wx.CENTER | wx.ALL, 5)
         panel.SetSizerAndFit(cont)
+
+        accel_tbl = wx.AcceleratorTable([
+            (wx.ACCEL_ALT | wx.ACCEL_SHIFT,  ord('c'), btn_copy.GetId()),
+            (wx.ACCEL_ALT | wx.ACCEL_SHIFT,  ord('s'), btn_save.GetId()),
+            (wx.ACCEL_NORMAL,  wx.WXK_RETURN, btn.GetId()),
+        ])
+        self.SetAcceleratorTable(accel_tbl)
     
     def OnClick(self, event):
         self.Close();
@@ -57,7 +68,7 @@ class ResultDialog(wx.Dialog):
             
     def onSave(self, event):
         try:
-            dlg = wx.FileDialog(self, "Save to file:", ".", "", "Text (*.txt)|*.txt", wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+            dlg = wx.FileDialog(self, "Save to file:", ".", self.filename, "Text (*.txt)|*.txt", wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
             if (dlg.ShowModal() == wx.ID_OK):
                 self.filename = dlg.GetFilename()
                 self.dirname = dlg.GetDirectory()
@@ -67,7 +78,7 @@ class ResultDialog(wx.Dialog):
                 wx.MessageBox("Results saved in "+os.path.join(self.dirname, self.filename)+"!", "Saved!")
             dlg.Destroy()
         except:
-            pass
+            print("fuck")
 
 
 class TabText(wx.Panel):

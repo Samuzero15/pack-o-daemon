@@ -5,9 +5,16 @@ import sys
 import subprocess
 import traceback
 import wx
-import pack_o_daemon.src.funs_n_cons_2 as utils
-import pack_o_daemon.src.constants as const
-import pack_o_daemon.src.threads as br
+
+try:
+    import src.funs_n_cons_2 as utils
+    import src.constants as const
+    import src.threads as br
+except ModuleNotFoundError: # If the module is installed and running in the main repo.
+    import pack_o_daemon.src.funs_n_cons_2 as utils
+    import pack_o_daemon.src.constants as const
+    import pack_o_daemon.src.threads as br
+
 from glob import iglob
 from shutil import copyfile, rmtree
 
@@ -15,6 +22,10 @@ from shutil import copyfile, rmtree
 ACS_T_LIBRARY = "LIBRARY"
 ACS_T_IMPORT =  "IMPORT"
 ACS_T_INCLUDE = "INCLUDE"
+ACS_T_PRAGMA1 = "GDCC_PRAGMA"
+ACS_T_PRAGMA2 = "GDCC_ACS"
+ACS_T_PRAGMA3 = "GDCC_LIBRARY"
+ACS_T_PRAGMAFULL = "PRAGMA ACS LIBRARY"
 
 ACS_CHAR_BREAK = [' ', '\t', '\n', '+', '-', '*', '/', '>', '<', '|', '&', '\\']
 
@@ -31,8 +42,28 @@ def acs_dict_token(word):
         "#library" : ACS_T_LIBRARY,
         "#import" : ACS_T_IMPORT,
         "#include" : ACS_T_INCLUDE,
+        "#pragma" : ACS_T_PRAGMA1,
+        "ACS": ACS_T_PRAGMA2,
+        "library": ACS_T_PRAGMA3
     }
     return tokens.get(word, None)
+
+ACS_FLIEEXT_TARGETS = {
+    "acc" : ".acs",
+    "bcc" : ".bcs",
+    "gdcc-acc" : ".acs",
+    "gdcc-c" : ".c"
+}
+
+def acs_makecommand(comp_type, exe_path, includes, file_target, file_compiled, extra_params):
+    if comp_type == 'bcc':
+        return [exe_path] + includes + ['-acc-err'] + [file_target] + [file_compiled] + extra_params 
+    if comp_type == 'gdcc-acc':
+        return [exe_path] + includes + [file_target] + [file_compiled] + extra_params
+    if comp_type == 'gdcc-c':
+        return [exe_path] + includes + [file_target] + ['-c'] + ['-o'] + [file_compiled] + extra_params
+    
+    return [exe_path] + includes + [file_target] + [file_compiled] + extra_params 
 
 class Token():
     def __init__(self, token_type, token_value=None):
@@ -64,18 +95,26 @@ def acs_parse_tokens(text):
         word_list.append(word)
         word = ""
     
+    gdcc_token_count = 0
     token_mode = 0
     token_type = "TOKEN"
     tokens = []
     for w in word_list:
         if(token_mode == 0):
-            token_type = acs_dict_token(w);
+            token_type = acs_dict_token(w)
             if(not (token_type is None)):
                 token_mode = 1
+
         else:
-            mytoken = Token(token_type, w);
-            tokens.append(mytoken)
-            token_mode = 0;
+            if token_type == ACS_T_PRAGMA1 or (token_type == ACS_T_PRAGMA2 and gdcc_token_count == 1) or (token_type == ACS_T_PRAGMA3 and gdcc_token_count == 2):
+                gdcc_token_count += 1
+                token_mode = 0
+            else:
+                mytoken = Token(token_type, w)
+                tokens.append(mytoken)
+                gdcc_token_count = 0
+                token_mode = 0
+    
     return tokens
 
 # This function will check the acs file for any dependencies needed to let this file work.
@@ -83,39 +122,25 @@ def acs_check_library_and_dependencies(builder):
     dependencies = []
     libraries = []
     utils.process_msg(builder, "Reading dependencies, this might take a while...");
+    comp_type = const.ini_prop(const.JSON_ACSCOMP_TYPE, "acc", const.JSON_ACSCOMP)
+    file_target = ACS_FLIEEXT_TARGETS[comp_type]
     for root, dirs, files in os.walk(os.getcwd()):
         for file in files:
             if builder.abort: return ACSCOMP_FALLBACK
-
-            comp_type = const.ini_prop("type", "acc", "acs_compilation")
-            if comp_type == 'bcc':
-                if file.endswith(".bcs"):
-                    acsfile = os.path.join(root, file)
-                    try:
-                        with open(acsfile, "r") as acsfile_reader:
-                            text = acsfile_reader.read()
-                            for t in acs_parse_tokens(text):        
-                                if (t.t_type == ACS_T_INCLUDE or t.t_type == ACS_T_IMPORT):
-                                    dependencies.append(t.t_value.replace("\"", ""))
-                                elif t.t_type == ACS_T_LIBRARY:
-                                    libraries.append(t.t_value.replace("\"", "") + ".bcs")
-                            acsfile_reader.close()
-                    except FileNotFoundError:
-                        pass
-            else:
-                if file.endswith(".acs"):
-                    acsfile = os.path.join(root, file)
-                    try:
-                        with open(acsfile, "r") as acsfile_reader:
-                            text = acsfile_reader.read()
-                            for t in acs_parse_tokens(text):        
-                                if (t.t_type == ACS_T_INCLUDE or t.t_type == ACS_T_IMPORT):
-                                    dependencies.append(t.t_value.replace("\"", ""))
-                                elif t.t_type == ACS_T_LIBRARY:
-                                    libraries.append(t.t_value.replace("\"", "") + ".acs")
-                            acsfile_reader.close()
-                    except FileNotFoundError:
-                        pass
+            if file.endswith(file_target):
+                acsfile = os.path.join(root, file)
+                try:
+                    with open(acsfile, "r") as acsfile_reader:
+                        text = acsfile_reader.read()
+                        for t in acs_parse_tokens(text):
+                            # print(t.to_string())        
+                            if (t.t_type == ACS_T_INCLUDE or t.t_type == ACS_T_IMPORT):
+                                dependencies.append(t.t_value.replace("\"", ""))
+                            elif (t.t_type == ACS_T_LIBRARY or t.t_type == ACS_T_PRAGMA3):
+                                libraries.append(t.t_value.replace("\"", "") + file_target)
+                        acsfile_reader.close()
+                except FileNotFoundError:
+                    pass
             
     dependencies = set(dependencies)
     libraries = set(libraries)
@@ -132,7 +157,7 @@ def acs_check_library_and_dependencies(builder):
 def acs_check_extra_dependencies(builder, dependencies=[], scanned_deps=[]):
     if(len(scanned_deps) > 0):
         dependencies = scanned_deps.symmetric_difference(dependencies)
-        # print(dependencies)
+        
         
     total_dependencies = dependencies.copy()
     
@@ -141,6 +166,7 @@ def acs_check_extra_dependencies(builder, dependencies=[], scanned_deps=[]):
             total_dependencies = total_dependencies.union(acs_file_dependency_check(builder, d, dependencies.union(scanned_deps)))
             if (total_dependencies == -1): return -1
         except: return -1
+
     return total_dependencies
 
 def acs_file_dependency_check(builder, target_file, dependencies=[]):
@@ -156,6 +182,7 @@ def acs_file_dependency_check(builder, target_file, dependencies=[]):
                         text = acsfile_reader.read()
                         for t in acs_parse_tokens(text):        
                             if (t.t_type == ACS_T_INCLUDE or t.t_type == ACS_T_IMPORT):
+                                print(t.t_value.replace("\"", ""))
                                 new_dependencies.add(t.t_value.replace("\"", ""))
                         acsfile_reader.close()
                 except FileNotFoundError:
@@ -270,18 +297,12 @@ def acs_compile(builder, part):
     pathdir = os.path.join(rootDir, sourceDir)
     
     os.chdir(builder.ui.rootdir)
-    comp_path = utils.relativePath(const.ini_prop("executeable", "..\\", "acs_compilation"))
+    comp_path = utils.relativePath(const.ini_prop(const.JSON_ACSCOMP_EXECUTEABLE, "..\\", const.JSON_ACSCOMP))
     tools_dir = os.path.dirname(comp_path)
     src_dir = os.path.join(rootDir, sourceDir)
     acs_dir = os.path.join(pathdir, "acs")
     
-    extra_params = const.ini_prop("extra_params", "", section="acs_compilation").split()
-
-    comp_type = const.ini_prop("type", "acc", "acs_compilation")
-    if comp_type == 'bcc':
-        comp_type = 'bcc'
-    else:
-        comp_type = 'acc'
+    extra_params = const.ini_prop(const.JSON_ACSCOMP_EXTRAPARAMS, "", section=const.JSON_ACSCOMP).split()
 
     if not os.path.isfile(comp_path):
         utils.process_msg(builder, "ACS compiler can't find '" + comp_path + "'\n" + 
@@ -300,18 +321,62 @@ def acs_compile(builder, part):
             rmtree(tmp_dir)
 
     if not os.path.exists(tmp_dir): os.mkdir(tmp_dir)
-
     
     # includes = ['-i'] + [tools_dir] """+ ['-i'] + [src_dir]"""
     # if(builder.ui.flags[const.BFLAG_CACHEACSLIBS].GetValue()):
-    includes = ['-i'] + [tools_dir] + ['-i'] + [tmp_dir]
+    comp_type = const.ini_prop(const.JSON_ACSCOMP_TYPE, "acc", const.JSON_ACSCOMP)
+    library_dirs = const.ini_prop(const.JSON_ACSCOMP_LIBRARYDIRS, [], const.JSON_ACSCOMP)
+    library_dirs_cmd = []
+    for lib in library_dirs:
+        library_dirs_cmd.extend(['-i'])
+        library_dirs_cmd.extend([lib])
     
-    if comp_type == 'bcc':
-        includes = ['-i'] + [tools_dir] + ['-i'] + [tmp_dir] + ['-i'] + [utils.relativePath(os.path.join(tools_dir, '..\\lib'))]
-    else:
-        includes = ['-i'] + [tools_dir] + ['-i'] + [tmp_dir]
+    includes = ['-i'] + [tools_dir] + ['-i'] + [tmp_dir] + library_dirs_cmd
 
-    # print(includes);
+    # Work-arround to hide the acc console.
+    startupinfo = None
+    if os.name == 'nt':
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+    # Make the GDCC_Libraries (libc and libGDCC), and prepare the gdcc's linker.
+    if comp_type == 'gdcc-c':
+        exe_path_linker = const.ini_prop(const.JSON_ACSCOMP_GDCCLINKER, "..\\", const.JSON_ACSCOMP)
+        gdcc_libs = const.ini_prop(const.JSON_ACSCOMP_GDCCMAKELIBS, True, const.JSON_ACSCOMP)
+        if (not os.path.isfile(exe_path_linker)):
+            if len(exe_path_linker) == 0:
+                msg = "GDCC-C's Linker executeable path is not specified, set it on Settings > ACS Compilation.\n\nACS Compilation skipped."
+            else: 
+                msg = "GDCC-C's Linker executeable can't be found on the route '"+exe_path_linker+"', set it on Settings > ACS Compilation.\n\nACS Compilation skipped."
+            wx.MessageDialog(builder.ui, msg).ShowModal()
+            utils.process_msg(builder, msg)
+            return 0
+
+        if gdcc_libs:
+            exe_path_makelib = const.ini_prop("gdcc-makelib_exe", "..\\", const.JSON_ACSCOMP)
+            if (not os.path.isfile(exe_path_makelib)):
+                if len(exe_path_makelib) == 0:
+                    msg = "GDCC-C's Makelib executeable path is not specified, set it on Settings > ACS Compilation.\n\nACS Compilation skipped."
+                else:
+                    msg = "GDCC-C's Makelib executeable can't be found on the route '"+exe_path_makelib+"', set it on Settings > ACS Compilation.\n\nACS Compilation skipped."
+                wx.MessageDialog(builder.ui, msg).ShowModal()
+                utils.process_msg(builder, msg)
+                return 0
+            makelibs_path = os.path.join(tmp_dir, "libs.ir")
+            compcmd_makelibs = [exe_path_makelib] + ["libGDCC"] + ["libc"] + ["-co"] + [makelibs_path] + extra_params
+            utils.process_msg(builder, "Building LibGDCC and LibC libraries".format(name=partname))
+            utils.printProgress(builder, -1)
+            p = subprocess.Popen(compcmd_makelibs,stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, startupinfo=startupinfo)
+            out, err = p.communicate()
+            if(len(err) > 0):
+                wx.MessageDialog(builder.ui, "Something went wrong in the making of GDCC's libraries.\n\n" + err.decode('ansi')).ShowModal()
+                utils.process_msg(builder, "Something went wrong, ACS Compilation skipped.")
+                return 0
+            utils.process_msg(builder, "GDCC Libraries built and ready to be linked.")
+            utils.printProgress(builder, -1)
+        ir_libfiles = []
+    
+    #print(includes)
     
     os.chdir(acs_dir)
 
@@ -329,12 +394,6 @@ def acs_compile(builder, part):
                 current += 1
     utils.process_msg(builder, "{name} Old Compiled ACS cleared.".format(name=partname))
     
-    # Work-arround to hide the acc console.
-    startupinfo = None
-    if os.name == 'nt':
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-    
     os.chdir(src_dir)
     outs = ACSCOMP_RUNNING
     while True:
@@ -344,6 +403,7 @@ def acs_compile(builder, part):
                 utils.process_msg(builder, "Aborting ACS Compilation.")
                 builder.abort = True
                 outs = ACSCOMP_FALLBACK
+                os.chdir(rootDir)
             elif builder.ui.response == 1: # Again
                 # rmtree(tmp_dir) # Refresh the acs again!
                 utils.process_msg(builder, "Retrying ACS Compilation.".format(file))
@@ -356,6 +416,7 @@ def acs_compile(builder, part):
             return -1
         
         if(outs == ACSCOMP_COMPLETED): 
+            os.chdir(rootDir)
             utils.process_msg(builder, "{name} ACS Compiled Sucessfully.".format(name=partname));
             break
         
@@ -378,14 +439,23 @@ def acs_compile(builder, part):
             return 0
         
         # If user called to abort.
-        if (files_to_compile == -1 or outs == ACSCOMP_FALLBACK): return -1
+        if (files_to_compile == -1 or outs == ACSCOMP_FALLBACK): 
+            os.chdir(rootDir)
+            return -1
     
         #print(files_to_compile)
         # The stage is set! Let the compiling-fest begin!
-        utils.process_msg(builder, "Compiling ACS for {name}".format(name=partname));
-        current = 0;
+        if(len(files_to_compile) == 0): 
+            utils.process_msg(builder, "No files to compile!")
+            os.chdir(rootDir)
+            return -1
+
+        utils.process_msg(builder, "Compiling ACS for {name}".format(name=partname))
+        
+        current = 0
         for file in files_to_compile:
             if builder.abort: 
+                os.chdir(rootDir)
                 if (not builder.ui.flags[const.BFLAG_CACHEACSLIBS].GetValue()): rmtree(tmp_dir)
                 return -1
             else:
@@ -394,51 +464,89 @@ def acs_compile(builder, part):
                 f_target = os.path.join(tmp_dir, file[2])
                 f_name = os.path.basename(f_target).split('.')[0]
                 f_names = os.path.basename(f_target).split('.')[0] + '.' + os.path.basename(f_target).split('.')[1]
-                
+                f_compiled = os.path.join(acs_dir, f_name + '.o')
+
+                """
                 compcmd     = [comp_path] + includes + [f_target] + [os.path.join(acs_dir, f_name + '.o')] + extra_params
                 if comp_type == 'bcc':
-                    compcmd     = [comp_path] + includes + ['-acc-err'] + [f_target] + [os.path.join(acs_dir, f_name + '.o')] + extra_params
+                    compcmd     = [comp_path] + includes + ['-acc-err'] + [f_target] + [f_compiled] + extra_params
                 else:
-                    compcmd     = [comp_path] + includes + [f_target] + [os.path.join(acs_dir, f_name + '.o')] + extra_params
+                    compcmd     = [comp_path] + includes + [f_target] + [f_compiled] + extra_params
+                """
+                if(comp_type == "gdcc-c"):
+                    f_compiled_ir = os.path.join(tmp_dir, f_name + '.ir')
+                    compcmd = acs_makecommand(comp_type, comp_path, includes, f_target, f_compiled_ir, extra_params)
+                    ir_libfiles.append(f_compiled_ir)
+                else:
+                    compcmd = acs_makecommand(comp_type, comp_path, includes, f_target, f_compiled, extra_params)
                 
-
-                subprocess.call(compcmd,stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, startupinfo=startupinfo)
+                #print(compcmd)
+                p = subprocess.Popen(compcmd,stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, startupinfo=startupinfo)
+                out, err = p.communicate()
                 # acs_err = os.path.join(rootDir, 'acs.err')
                 acs_err = f_target.replace(f_names, 'acs.err')
                 # We got an error in the acs script? Stop it, and show the error ASAP.
-                if os.path.isfile(acs_err):
+                #print("out: ", out);
+                #print("err: ", err);
+                if (comp_type == 'acc' and os.path.isfile(acs_err)) or (comp_type != 'acc' and (len(err) > 0)):
                     wx.Bell()
                     acs_err_dir = utils.get_file_dir(acs_err)
                     os.chdir(acs_err_dir)
                     # os.system('cls')
-                    with open('acs.err', 'rt') as errorlog:
-                        error = errorlog.read()
-                        # builder.ui.AddToLog(error)
-                        wx.PostEvent(builder.ui, br.StatusBarEvent(error))
-                        # builder.ui.ACSErrorOutput(error)
-                        wx.CallAfter(builder.ui.ACSErrorOutput, error + "\n\nDo you wish to RETRY or ABORT the ACS Compilation?")
-                        errorlog.close()
-                    os.remove(os.path.join(acs_err_dir, 'acs.err'))
+                    try:
+                        with open('acs.err', 'rt') as errorlog:
+                            error = errorlog.read()
+                            # builder.ui.AddToLog(error)
+                            ACSComp_SendError(builder, error)
+                            errorlog.close()
+                        os.remove(os.path.join(acs_err_dir, 'acs.err'))
+                    except FileNotFoundError:
+                        if (len(err) > 0): 
+                            ACSComp_SendError(builder, err.decode("ansi"))
+                    os.chdir(rootDir)
                     utils.process_msg(builder, "The file contains some errors, compilation failed.")
                     outs = ACSCOMP_PROMPT
                     break
-
                     # Actually instead of just bouncing you out, I prefer to just repeat the compilation of that file.
-                
-                # Also stop if the expected file was'nt created.
-                if not os.path.isfile(os.path.join(acs_dir, f_name + '.o')):
+
+                    # Also stop if the expected file was'nt created.
+                """
+                elif not os.path.isfile(f_compiled):
                     wx.Bell()
                     os.chdir(rootDir)
                     # os.system('cls')
                     if(os.path.isfile(acs_err)): os.remove(acs_err)
-                    wx.CallAfter(builder.ui.ACSErrorOutput, "Something blew up :/")
+                    # print(err)
+                    wx.CallAfter(builder.ui.ACSErrorOutput, "Compilation failed for the file '"+ f_name 
+                                 +"'\n\nO:'" + out.decode("ansi") + "'\n\nE:'"+err.decode("ansi") +
+                                 "'\n\nDo you wish to RETRY or ABORT the ACS Compilation?")
+                    
                     utils.process_msg(builder, "The expected file was'nt created, compilation failed.")
                     outs = ACSCOMP_PROMPT
                     break
-                
+                """
                 current+=1
                 utils.printProgress(builder, current, len(files_to_compile), 'Compiled', 'acs files. (' + f_names + ')')
         
+        if comp_type == 'gdcc-c':
+            #print("Executing Linker")
+            f_compiled = os.path.join(acs_dir, const.ini_prop(const.JSON_ACSCOMP_GDCCMAINLIB,"project", const.JSON_ACSCOMP) + '.o')
+            compcmd = [exe_path_linker] + ir_libfiles
+            if gdcc_libs:
+                #print("Using gdcc libs")
+                compcmd += [makelibs_path] + ['-o'] + [f_compiled] + extra_params
+            else: 
+                compcmd += ['-o'] + [f_compiled] + extra_params
+            # print(compcmd)
+            p = subprocess.Popen(compcmd,stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, startupinfo=startupinfo)
+            out, err = p.communicate()
+            if(len(out) > 0):
+                utils.process_msg(builder, out.decode("ansi"))
+            if(len(err) > 0):
+                wx.MessageDialog(builder.ui, err.decode("ansi")).ShowModal()
+                utils.process_msg(builder, err.decode("ansi"))
+                
+
         if outs == ACSCOMP_RUNNING: 
             outs = ACSCOMP_COMPLETED
     # Job's done here, get back to the root directory and continue with the rest.
@@ -446,3 +554,8 @@ def acs_compile(builder, part):
     os.chdir(rootDir)
     if (not builder.ui.flags[const.BFLAG_CACHEACSLIBS].GetValue()): rmtree(tmp_dir)
     return 0
+
+def ACSComp_SendError(builder, msg):
+    wx.PostEvent(builder.ui, br.StatusBarEvent(msg))
+    # builder.ui.ACSErrorOutput(error)
+    wx.CallAfter(builder.ui.ACSErrorOutput, msg + "\n\nDo you wish to RETRY or ABORT the ACS Compilation?")

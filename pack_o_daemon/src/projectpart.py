@@ -1,10 +1,16 @@
 import wx
 import os
-import pack_o_daemon.src.threads as br
-import pack_o_daemon.src.funs_n_cons_2 as utils
-import pack_o_daemon.src.constants as const
 
-import pack_o_daemon.src.acs_comp as acscomp
+try:
+    import src.threads as br
+    import src.funs_n_cons_2 as utils
+    import src.constants as const
+    import src.acs_comp as acscomp
+except ModuleNotFoundError: # If the module is not installed and running in the main repo.
+    import pack_o_daemon.src.threads as br
+    import pack_o_daemon.src.funs_n_cons_2 as utils
+    import pack_o_daemon.src.constants as const
+    import pack_o_daemon.src.acs_comp as acscomp
 
 from configparser import ConfigParser
 
@@ -13,13 +19,13 @@ class ProjectPart():
         
         self.name           = name
         self.rootdir        = rootdir
-        self.version        = const.ini_prop_projectparts("release",            "v0",     name)
-        self.filename       = const.ini_prop_projectparts("filename",          name,     name)
-        self.acscomp        = const.ini_prop_projectparts("acscomp",             section=name)
-        self.sourcedir      = const.ini_prop_projectparts("sourcedir",         "src",    name)
-        self.distdir        = const.ini_prop_projectparts("distdir",           "dist",   name)
-        self.notxt          = const.ini_prop_projectparts("notxt",               section=name)
-        self.skip           = const.ini_prop_projectparts("skipped",             section=name)
+        self.version        = const.ini_prop_projectparts(const.JSON_PROJPARTS_RELEASE,            "v0",     name)
+        self.filename       = const.ini_prop_projectparts(const.JSON_PROJPARTS_FILENAME,          name,     name)
+        self.acscomp        = const.ini_prop_projectparts(const.JSON_PROJPARTS_ACSCOMP,             section=name)
+        self.sourcedir      = const.ini_prop_projectparts(const.JSON_PROJPARTS_SOURCEDIR,         "src",    name)
+        self.distdir        = const.ini_prop_projectparts(const.JSON_PROJPARTS_DISTDIR,           "dist",   name)
+        self.notxt          = const.ini_prop_projectparts(const.JSON_PROJPARTS_NOTXT,               section=name)
+        self.skip           = const.ini_prop_projectparts(const.JSON_PROJPARTS_SKIPPED,             section=name)
     
     
     def GetExpectedPWADS(self, versioned, snapshot, snapshot_tag):
@@ -74,13 +80,14 @@ class ProjectPart():
             self.PartMsg(thread, "ACS Compilation skipped")
         elif(compileacs):
             res = acscomp.acs_compile(thread, self)
+            os.chdir(rootdir)
+            #print("Done compiling.")
         # print(res)
         # Check if the cancel button is called.
         if thread.abort or res == -1:
             if thread.abort:  fail_reason = br.BUILD_CANCELED
             else:             fail_reason = br.BUILD_ERROR
             output = (fail_reason, [])
-            os.chdir(rootdir)
             return output
         
         # After compiling, zip them all.
