@@ -54,8 +54,7 @@ If you change something from the project.ini file, and you have the executable r
 5. Use the command ```.\env\scripts\activate```, and check if "(env)" is right next to the command prompt line.
 6. Now get the requirements installed with ```pip install -r requirements.txt```
 7. And you're ready to go, it depends on what you want to do.
-	> * To build a executeable (for windows), execute this cmd line.
-		```"pyinstaller" pack_o_daemon\run.py -w --onefile --name pack-o-daemon_win7-32 -i "icon.ico" --add-data "pack_o_daemon/src/*.*;pack_o_daemon/src" --add-data "pack_o_daemon/src/imgs/*.*;pack_o_daemon/src/imgs" --add-data "changelog.md;." --version-file="file_version_info.txt" ```
+	> * To build a executeable (for windows), execute ```python make.py```
 	> * Depending on your python build (on the virtual enviroment too), the output file will be 64 bits or 32 bits.
 	> * There is a make.bat that does it for you (if you have the three enviroments)
 	> * Not recommended for Linux, it will make a bloatloaded file of almost 100mbs.

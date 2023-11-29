@@ -10,3 +10,4 @@ env32/
 envw7/
 *.egg-info
 .vscode/
+file_version_info.txt
