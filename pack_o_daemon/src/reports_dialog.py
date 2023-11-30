@@ -139,7 +139,7 @@ class ReportsDialog(wx.Panel):
             for path, dirs, files in os.walk (dir_path):
                 for file in files:
                     path_file = os.path.join(path, file)
-                    path_file = path_file.replace(os.path.join(self.main.rootdir, c.ini_prop(const.JSON_BUILDSETS_BUILDDIR, section=c.JSON_BUILDSETS)), "...")
+                    path_file = path_file.replace(os.path.join(self.main.rootdir, c.ini_prop(c.JSON_BUILDSETS_BUILDDIR, section=c.JSON_BUILDSETS)), "...")
                     
                     data+= path_file + "\n"
             data += "///////////////////// "+ header +" ON "+ part.name +" END //////////////////////////"
