@@ -24,6 +24,7 @@ class ReportsDialog(wx.Panel):
         wx.Panel.__init__(self, parent)
         self.main = frame
         cont = wx.BoxSizer(wx.VERTICAL)
+        
 
         btn_reportactors = wx.Button(self, label="Actors List")
         btn_reportdoomednums = wx.Button(self, label="DoomEdNums List")
@@ -47,7 +48,7 @@ class ReportsDialog(wx.Panel):
             (btn_report_doomednumcmp_chex, 0, wx.ALL | wx.EXPAND, 1)
         ])
 
-        text = wx.StaticText(parent, label="Compare IWAD's DoomEdNums")
+        text = wx.StaticText(self, label="Compare IWAD's DoomEdNums")
         cont.AddMany([
             (btn_reportactors, 0, wx.ALL | wx.EXPAND, 1),
             (btn_reportdoomednums, 0, wx.ALL | wx.EXPAND, 1),
@@ -68,8 +69,8 @@ class ReportsDialog(wx.Panel):
         self.Bind(wx.EVT_BUTTON, lambda evt, temp="Hexen": self.OnCompareReplacements(evt, temp), btn_report_doomednumcmp_hexen)
         self.Bind(wx.EVT_BUTTON, lambda evt, temp="Strife": self.OnCompareReplacements(evt, temp), btn_report_doomednumcmp_strife)
         self.Bind(wx.EVT_BUTTON, lambda evt, temp="Chex Quest": self.OnCompareReplacements(evt, temp), btn_report_doomednumcmp_chex)
-
-        self.SetSizerAndFit(cont)
+        
+        self.SetSizer(cont)
     
     def OnCompareReplacements(self, event, iwad_doomednums):
         reportdata = ""

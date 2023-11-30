@@ -631,7 +631,8 @@ class Main(wx.Frame):
     def OnClose(self, event):
         self.taskbar.RemoveIcon()
         self.taskbar.Destroy()
-        self.notif.Close()
+        if self.notif.Show():
+        	self.notif.Close()
         self.notif.Destroy()
         self.Destroy()
     
