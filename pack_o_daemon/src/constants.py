@@ -15,7 +15,7 @@ from random import randint
 
 PROJECT_FILE = "project.json"
 
-VERSION = (1, 7, 0)
+VERSION = (1, 7, 1)
 EXENAME = "Pack-o-daemon"
 
 BFLAG_SKIPACSCOMP = 0
@@ -101,6 +101,7 @@ JSON_ACSCOMP_EXECUTEABLE = "executeable"
 JSON_ACSCOMP_GDCCLINKER = "gdcc-linker_exe"
 JSON_ACSCOMP_GDCCMAKELIBS = "gdcc-make_libs"
 JSON_ACSCOMP_GDCCMAINLIB =  "gdcc-mainlib_name"
+JSON_ACSCOMP_GDCCTARGETENGINE =  "gdcc-target_engine"
 JSON_ACSCOMP_EXTRAPARAMS = "extra_params"
 JSON_ACSCOMP_LIBRARYDIRS =  "library_dirs"
 
@@ -174,6 +175,7 @@ def make_default_json():
             JSON_ACSCOMP_GDCCLINKER : "gdcc-ld.exe",
             JSON_ACSCOMP_GDCCMAKELIBS : True,
             JSON_ACSCOMP_GDCCMAINLIB : "project",
+            JSON_ACSCOMP_GDCCTARGETENGINE : "project",
             JSON_ACSCOMP_EXTRAPARAMS : "",
             JSON_ACSCOMP_LIBRARYDIRS : []
         },

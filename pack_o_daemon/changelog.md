@@ -1,4 +1,11 @@
 # Packodaemon Changelog
+## v1.7.1 [Warning bypass and few fixes]
+	* Now compilers can ignore warnings messages and continue the compilation process.
+	* Added a new option for GDCC-C Compilation, target engine (Zandronum and Zdoom)
+	* Now the skip flags will be preserved after saving the settings from the config dialog.
+	* The acs compilation script will not be executed twice after retrying.
+	* Little fix with the notification message.
+
 ## v1.7.0 [UI Revamp, GDCC Support, extra stuff]
 	* The UI has been edited and compacted down in tabs for easier access to the different functions from the pack-o-daemon!
 	* The build flags can be saved in the project.json file for the next uses, using the Save Flag button!

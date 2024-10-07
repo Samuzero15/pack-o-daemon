@@ -106,7 +106,7 @@ class ConfigDialog(wx.Dialog):
             for index in range(self.nb_pp.GetPageCount()):
                 if self.nb_pp.GetPageText(index) == projpart:
                     del self.projparts[projpart]
-                    print(self.projparts)
+                    # print(self.projparts)
                     self.nb_pp.DeletePage(index)
                     self.nb_pp.SendSizeEvent()
                     break
@@ -160,6 +160,7 @@ class ConfigDialog(wx.Dialog):
             form.InputTextFile(self.tab_ac, "(GDCC-C) Makelib Executeable", "gdcc-makelib_exe",
                                 frame.rootdir, "Executeable file (*.exe;)|*.exe", "Pick the GDCC's makelib executeable", const.JSON_ACSCOMP),
             form.InputText(self.tab_ac, "(GDCC-C) Project Library Name", const.JSON_ACSCOMP_GDCCMAINLIB, const.JSON_ACSCOMP),
+            form.InputComboBox(self.tab_ac, "(GDCC-C) Target Engine", const.JSON_ACSCOMP_GDCCTARGETENGINE, const.JSON_ACSCOMP, ["Zandronum", "ZDoom"])
         ]
         self.ac_inputs += self.ac_gdcc_inputs
         self.ac_inputs += [
@@ -193,7 +194,12 @@ class ConfigDialog(wx.Dialog):
         
         self.tab_ac.Layout()
         self.tab_ac.FitInside()
+
     def OnSave(self, event):
+        skip_part_oldvalues = []
+        for skip_part in self.frame.skip_parts:
+            skip_part_oldvalues.append(skip_part.GetValue())
+        
         os.chdir(self.frame.rootdir)
         try:
             p = {}
@@ -260,6 +266,11 @@ class ConfigDialog(wx.Dialog):
             self.frame.cb_tab.Layout()
             self.frame.cb_tab.FitInside()
             const.CONFIG_DATA, FIRST_TIME = const.load_stuff()
+
+            # Recover old skip part flag values if they were already checked before.
+            for skip_part_id in range(0, min(len(self.frame.skip_parts), len(skip_part_oldvalues))):
+                self.frame.skip_parts[skip_part_id].SetValue(skip_part_oldvalues[skip_part_id])
+
             self.Close()
         except Exception as e:
             dlg = wx.MessageDialog(None, "Something went wrong!\n" +"\n"+ traceback.format_exc(), "Ah shiet!").ShowModal()

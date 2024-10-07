@@ -3,6 +3,7 @@ import filecmp
 import os
 import sys
 import subprocess
+import time
 import traceback
 import wx
 
@@ -55,13 +56,13 @@ ACS_FLIEEXT_TARGETS = {
     "gdcc-c" : ".c"
 }
 
-def acs_makecommand(comp_type, exe_path, includes, file_target, file_compiled, extra_params):
+def acs_makecommand(comp_type, exe_path, includes, file_target, file_compiled, extra_params, target_engine = ""):
     if comp_type == 'bcc':
         return [exe_path] + includes + ['-acc-err'] + [file_target] + [file_compiled] + extra_params 
     if comp_type == 'gdcc-acc':
         return [exe_path] + includes + [file_target] + [file_compiled] + extra_params
     if comp_type == 'gdcc-c':
-        return [exe_path] + includes + [file_target] + ['-c'] + ['-o'] + [file_compiled] + extra_params
+        return [exe_path] + ['--target-engine'] + [target_engine] + includes + [file_target] + ['-c'] + ['-o'] + [file_compiled] + extra_params
     
     return [exe_path] + includes + [file_target] + [file_compiled] + extra_params 
 
@@ -182,7 +183,7 @@ def acs_file_dependency_check(builder, target_file, dependencies=[]):
                         text = acsfile_reader.read()
                         for t in acs_parse_tokens(text):        
                             if (t.t_type == ACS_T_INCLUDE or t.t_type == ACS_T_IMPORT):
-                                print(t.t_value.replace("\"", ""))
+                                # print(t.t_value.replace("\"", ""))
                                 new_dependencies.add(t.t_value.replace("\"", ""))
                         acsfile_reader.close()
                 except FileNotFoundError:
@@ -290,6 +291,7 @@ def acs_update_cached_files(builder, partname, fileslist_for_acs):
 
 # A powerful function that compiles every single acs library file in the specified directory.
 def acs_compile(builder, part):
+    print("Acs Comp Start")
     rootDir     = part.rootdir
     sourceDir   = part.sourcedir
     partname    = part.name
@@ -340,6 +342,7 @@ def acs_compile(builder, part):
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
     # Make the GDCC_Libraries (libc and libGDCC), and prepare the gdcc's linker.
+    gdcc_target_engine = const.ini_prop(const.JSON_ACSCOMP_GDCCTARGETENGINE, "Zandronum", const.JSON_ACSCOMP)
     if comp_type == 'gdcc-c':
         exe_path_linker = const.ini_prop(const.JSON_ACSCOMP_GDCCLINKER, "..\\", const.JSON_ACSCOMP)
         gdcc_libs = const.ini_prop(const.JSON_ACSCOMP_GDCCMAKELIBS, True, const.JSON_ACSCOMP)
@@ -363,7 +366,7 @@ def acs_compile(builder, part):
                 utils.process_msg(builder, msg)
                 return 0
             makelibs_path = os.path.join(tmp_dir, "libs.ir")
-            compcmd_makelibs = [exe_path_makelib] + ["libGDCC"] + ["libc"] + ["-co"] + [makelibs_path] + extra_params
+            compcmd_makelibs = [exe_path_makelib] + ["--target-engine"] + [gdcc_target_engine] + ["libGDCC"] + ["libc"] + ["-co"] + [makelibs_path] + extra_params
             utils.process_msg(builder, "Building LibGDCC and LibC libraries".format(name=partname))
             utils.printProgress(builder, -1)
             p = subprocess.Popen(compcmd_makelibs,stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, startupinfo=startupinfo)
@@ -397,29 +400,8 @@ def acs_compile(builder, part):
     os.chdir(src_dir)
     outs = ACSCOMP_RUNNING
     while True:
-        # Wait until the ACS Error dialog gives us an answer
-        if outs == ACSCOMP_PROMPT:
-            if builder.ui.response == 0: # Sthap
-                utils.process_msg(builder, "Aborting ACS Compilation.")
-                builder.abort = True
-                outs = ACSCOMP_FALLBACK
-                os.chdir(rootDir)
-            elif builder.ui.response == 1: # Again
-                # rmtree(tmp_dir) # Refresh the acs again!
-                utils.process_msg(builder, "Retrying ACS Compilation.".format(file))
-                outs = ACSCOMP_RUNNING
-            continue
-            
-        if(outs == ACSCOMP_FALLBACK):
-            os.chdir(rootDir)
-            if (not builder.ui.flags[const.BFLAG_CACHEACSLIBS].GetValue()): rmtree(tmp_dir)
-            return -1
-        
-        if(outs == ACSCOMP_COMPLETED): 
-            os.chdir(rootDir)
-            utils.process_msg(builder, "{name} ACS Compiled Sucessfully.".format(name=partname));
-            break
-        
+        outs = ACSCOMP_RUNNING
+        builder.ui.response = -1
         try:
             if (builder.ui.flags[const.BFLAG_CACHEACSLIBS].GetValue()):
                 if (len(files_to_compile) == 0): # Do this once.
@@ -475,12 +457,13 @@ def acs_compile(builder, part):
                 """
                 if(comp_type == "gdcc-c"):
                     f_compiled_ir = os.path.join(tmp_dir, f_name + '.ir')
-                    compcmd = acs_makecommand(comp_type, comp_path, includes, f_target, f_compiled_ir, extra_params)
+                    compcmd = acs_makecommand(comp_type, comp_path, includes, f_target, f_compiled_ir, extra_params, gdcc_target_engine)
                     ir_libfiles.append(f_compiled_ir)
                 else:
                     compcmd = acs_makecommand(comp_type, comp_path, includes, f_target, f_compiled, extra_params)
                 
-                #print(compcmd)
+                print(compcmd)
+                #print("Test")
                 p = subprocess.Popen(compcmd,stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, startupinfo=startupinfo)
                 out, err = p.communicate()
                 # acs_err = os.path.join(rootDir, 'acs.err')
@@ -488,7 +471,7 @@ def acs_compile(builder, part):
                 # We got an error in the acs script? Stop it, and show the error ASAP.
                 #print("out: ", out);
                 #print("err: ", err);
-                if (comp_type == 'acc' and os.path.isfile(acs_err)) or (comp_type != 'acc' and (len(err) > 0)):
+                if not os.path.exists(f_compiled) and (comp_type == 'acc' and (os.path.isfile(acs_err) or (len(err) > 0))):
                     wx.Bell()
                     acs_err_dir = utils.get_file_dir(acs_err)
                     os.chdir(acs_err_dir)
@@ -501,15 +484,40 @@ def acs_compile(builder, part):
                             errorlog.close()
                         os.remove(os.path.join(acs_err_dir, 'acs.err'))
                     except FileNotFoundError:
-                        if (len(err) > 0): 
-                            ACSComp_SendError(builder, err.decode("ansi"))
+                        error = err.decode("ansi")
+                        if (len(error) > 0): 
+                            ACSComp_SendError(builder, error)
                     os.chdir(rootDir)
                     utils.process_msg(builder, "The file contains some errors, compilation failed.")
                     outs = ACSCOMP_PROMPT
                     break
+                elif(comp_type == 'bcc' and (len(out) > 0)):
+                    output = out.decode("ansi")
+                    if "error:" in output:
+                        ACSComp_SendError(builder, output)
+                        outs = ACSCOMP_PROMPT
+                        break
+                    else:
+                        utils.process_msg(builder, "The file contains some warnings:\n'"+output+"'")
+                elif comp_type == 'gdcc-acc':
+                    error = err.decode("ansi")
+                    if "ERROR:" in error:
+                        ACSComp_SendError(builder, error)
+                        outs = ACSCOMP_PROMPT
+                        break
+                    else:
+                        utils.process_msg(builder, "There are some warnings in current file. \n" + error)
+                elif comp_type == 'gdcc-c':
+                    error = err.decode("ansi")
+                    if "ERROR:" in error:
+                        ACSComp_SendError(builder, error)
+                        outs = ACSCOMP_PROMPT
+                        break
+                    else:
+                        utils.process_msg(builder, "There are some warnings in current file. \n" + error)
                     # Actually instead of just bouncing you out, I prefer to just repeat the compilation of that file.
-
                     # Also stop if the expected file was'nt created.
+                
                 """
                 elif not os.path.isfile(f_compiled):
                     wx.Bell()
@@ -525,15 +533,23 @@ def acs_compile(builder, part):
                     outs = ACSCOMP_PROMPT
                     break
                 """
+                if not (os.path.exists(f_compiled) or os.path.exists(f_compiled_ir)):
+                    utils.process_msg(builder, "The expected file could'nt be generated, something else happened."
+                                      + "\nOutput Msg:"+out.decode("ansi") + "\nError Msg:"+err.decode("ansi")
+                                      +"\nSkipping ACS Compilation.")
+                    return -1
+                
                 current+=1
                 utils.printProgress(builder, current, len(files_to_compile), 'Compiled', 'acs files. (' + f_names + ')')
-        
+
+        if(outs == ACSCOMP_RUNNING):
+            outs = ACSCOMP_COMPLETED
+
         if comp_type == 'gdcc-c':
             #print("Executing Linker")
             f_compiled = os.path.join(acs_dir, const.ini_prop(const.JSON_ACSCOMP_GDCCMAINLIB,"project", const.JSON_ACSCOMP) + '.o')
-            compcmd = [exe_path_linker] + ir_libfiles
+            compcmd = [exe_path_linker] + ['--target-engine'] + [gdcc_target_engine] + ir_libfiles
             if gdcc_libs:
-                #print("Using gdcc libs")
                 compcmd += [makelibs_path] + ['-o'] + [f_compiled] + extra_params
             else: 
                 compcmd += ['-o'] + [f_compiled] + extra_params
@@ -545,10 +561,30 @@ def acs_compile(builder, part):
             if(len(err) > 0):
                 wx.MessageDialog(builder.ui, err.decode("ansi")).ShowModal()
                 utils.process_msg(builder, err.decode("ansi"))
-                
 
-        if outs == ACSCOMP_RUNNING: 
-            outs = ACSCOMP_COMPLETED
+        # Wait until the ACS Error dialog gives us an answer
+        
+        while(outs == ACSCOMP_PROMPT):
+            if builder.ui.response == 0: # Sthap
+                utils.process_msg(builder, "Aborting ACS Compilation.")
+                builder.abort = True
+                outs = ACSCOMP_FALLBACK
+                os.chdir(rootDir)
+            elif builder.ui.response == 1: # Again
+                # rmtree(tmp_dir) # Refresh the acs again!
+                utils.process_msg(builder, "Retrying ACS Compilation.".format(file))
+                outs = ACSCOMP_RUNNING
+            else: continue
+            
+        if(outs == ACSCOMP_FALLBACK):
+            os.chdir(rootDir)
+            if (not builder.ui.flags[const.BFLAG_CACHEACSLIBS].GetValue()): rmtree(tmp_dir)
+            return -1
+        
+        if(outs == ACSCOMP_COMPLETED): 
+            os.chdir(rootDir)
+            utils.process_msg(builder, "{name} ACS Compiled Sucessfully.".format(name=partname));
+            break
     # Job's done here, get back to the root directory and continue with the rest.
     
     os.chdir(rootDir)

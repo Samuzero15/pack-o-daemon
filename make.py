@@ -52,7 +52,7 @@ commands = [
     make_exe_build(arch)
 ]
 for cmd in commands:
-    print (cmd)
+    #print (cmd)
     p = subprocess.Popen(cmd,stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, startupinfo=startupinfo)
     out, err = p.communicate()
     if(len(out)>0):print(out)
