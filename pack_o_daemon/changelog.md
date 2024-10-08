@@ -1,4 +1,11 @@
 # Packodaemon Changelog
+## v1.7.2 [Resume button, other fixes]
+	* Now, after clicking a button on the ACS Error dialog, the Pack-o-daemon will pop back up to the front.
+	* Now the build flag values can be saved to the file after saving the settings (and it gets reflected by the build flags from the main tab)
+	* Cleaned up some print stuff.
+	* Added a "Resume" button, which it lets you continue the ACS compilation on the last file to be compiled after an ACS error.
+	* The ACS error dialog now it does'nt need to be generated from zero, now it only hides and shows as one dialog, and updates it's message accordingly.
+
 ## v1.7.1 [Warning bypass and few fixes]
 	* Now compilers can ignore warnings messages and continue the compilation process.
 	* Added a new option for GDCC-C Compilation, target engine (Zandronum and Zdoom)

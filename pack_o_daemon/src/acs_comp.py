@@ -289,9 +289,28 @@ def acs_update_cached_files(builder, partname, fileslist_for_acs):
     utils.process_msg(builder, "Cached ACS files updated.")
     return ACSCOMP_RUNNING
 
+def acs_preapre_compilable_files(builder, files_to_comp, partname, src_dir, tmp_dir, rootDir):
+    try:
+        if (builder.ui.flags[const.BFLAG_CACHEACSLIBS].GetValue()):
+            if (len(files_to_comp) == 0): # Do this once.
+                utils.process_msg(builder, "Caching ACS Libraries.")
+                files_to_comp = acs_update_compilable_files(builder, partname, src_dir, tmp_dir, True)
+            else:
+                utils.process_msg(builder, "Using already cached ACS Libraries.\n" +
+                        "[Remember to disable this if you're adding new libraries in settings dialog]")
+                outs = acs_update_cached_files(builder, partname, allfiles_to_compile)
+        else: # Do this always
+            files_to_comp = acs_update_compilable_files(builder, partname, src_dir, tmp_dir, True)
+        return files_to_comp
+    except Exception as e:
+        utils.process_msg(builder, "Something went really wrong. Skipping ACS Comp for {0}. ".format(partname))
+        utils.process_msg(builder, "Error msg: {0} ".format(str(e)))
+        utils.process_msg(builder, "Traceback: {0} ".format(traceback.format_exc()))
+        os.chdir(rootDir)
+        return 0
+
 # A powerful function that compiles every single acs library file in the specified directory.
 def acs_compile(builder, part):
-    print("Acs Comp Start")
     rootDir     = part.rootdir
     sourceDir   = part.sourcedir
     partname    = part.name
@@ -399,29 +418,17 @@ def acs_compile(builder, part):
     
     os.chdir(src_dir)
     outs = ACSCOMP_RUNNING
+    current = 0
     while True:
         outs = ACSCOMP_RUNNING
-        builder.ui.response = -1
-        try:
-            if (builder.ui.flags[const.BFLAG_CACHEACSLIBS].GetValue()):
-                if (len(files_to_compile) == 0): # Do this once.
-                    utils.process_msg(builder, "Caching ACS Libraries.")
-                    files_to_compile = acs_update_compilable_files(builder, partname, src_dir, tmp_dir, True)
-                else:
-                    utils.process_msg(builder, "Using already cached ACS Libraries.\n" +
-                          "[Remember to disable this if you're adding new libraries in settings dialog]")
-                    outs = acs_update_cached_files(builder, partname, allfiles_to_compile)
-            else: # Do this always
-                files_to_compile = acs_update_compilable_files(builder, partname, src_dir, tmp_dir, True)
-        except Exception as e:
-            utils.process_msg(builder, "Something went really wrong. Skipping ACS Comp for {0}. ".format(partname))
-            utils.process_msg(builder, "Error msg: {0} ".format(str(e)))
-            utils.process_msg(builder, "Traceback: {0} ".format(traceback.format_exc()))
-            os.chdir(rootDir)
-            return 0
+
+        files_to_compile = acs_preapre_compilable_files(builder, files_to_compile, partname, src_dir, tmp_dir, rootDir)
         
+        # If something bad happened.
+        if (files_to_compile == 0): return 0
+
         # If user called to abort.
-        if (files_to_compile == -1 or outs == ACSCOMP_FALLBACK): 
+        if (files_to_compile == -1): 
             os.chdir(rootDir)
             return -1
     
@@ -432,10 +439,14 @@ def acs_compile(builder, part):
             os.chdir(rootDir)
             return -1
 
-        utils.process_msg(builder, "Compiling ACS for {name}".format(name=partname))
-        
-        current = 0
-        for file in files_to_compile:
+        if(builder.ui.response != 2):
+            utils.process_msg(builder, "Compiling ACS for {name}".format(name=partname))
+            current = 0
+
+        builder.ui.response = -1
+
+        for file in files_to_compile[current:]:
+            # print(file)
             if builder.abort: 
                 os.chdir(rootDir)
                 if (not builder.ui.flags[const.BFLAG_CACHEACSLIBS].GetValue()): rmtree(tmp_dir)
@@ -462,7 +473,7 @@ def acs_compile(builder, part):
                 else:
                     compcmd = acs_makecommand(comp_type, comp_path, includes, f_target, f_compiled, extra_params)
                 
-                print(compcmd)
+                #print(compcmd)
                 #print("Test")
                 p = subprocess.Popen(compcmd,stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, startupinfo=startupinfo)
                 out, err = p.communicate()
@@ -487,34 +498,30 @@ def acs_compile(builder, part):
                         error = err.decode("ansi")
                         if (len(error) > 0): 
                             ACSComp_SendError(builder, error)
+                            
                     os.chdir(rootDir)
                     utils.process_msg(builder, "The file contains some errors, compilation failed.")
                     outs = ACSCOMP_PROMPT
+                    current=files_to_compile.index(file)
                     break
                 elif(comp_type == 'bcc' and (len(out) > 0)):
                     output = out.decode("ansi")
                     if "error:" in output:
                         ACSComp_SendError(builder, output)
                         outs = ACSCOMP_PROMPT
+                        current=files_to_compile.index(file)
                         break
                     else:
-                        utils.process_msg(builder, "The file contains some warnings:\n'"+output+"'")
-                elif comp_type == 'gdcc-acc':
+                        utils.process_msg(builder, "There are some warnings in the file '" + file[2] + "'.\n"+output+"'")
+                elif comp_type == 'gdcc-acc' or comp_type == 'gdcc-c':
                     error = err.decode("ansi")
                     if "ERROR:" in error:
                         ACSComp_SendError(builder, error)
                         outs = ACSCOMP_PROMPT
+                        current=files_to_compile.index(file)
                         break
-                    else:
-                        utils.process_msg(builder, "There are some warnings in current file. \n" + error)
-                elif comp_type == 'gdcc-c':
-                    error = err.decode("ansi")
-                    if "ERROR:" in error:
-                        ACSComp_SendError(builder, error)
-                        outs = ACSCOMP_PROMPT
-                        break
-                    else:
-                        utils.process_msg(builder, "There are some warnings in current file. \n" + error)
+                    elif len(error) > 0:
+                        utils.process_msg(builder, "There are some warnings in the file '" + file[2] + "'.\n" + error)
                     # Actually instead of just bouncing you out, I prefer to just repeat the compilation of that file.
                     # Also stop if the expected file was'nt created.
                 
@@ -539,7 +546,7 @@ def acs_compile(builder, part):
                                       +"\nSkipping ACS Compilation.")
                     return -1
                 
-                current+=1
+                current=files_to_compile.index(file)
                 utils.printProgress(builder, current, len(files_to_compile), 'Compiled', 'acs files. (' + f_names + ')')
 
         if(outs == ACSCOMP_RUNNING):
@@ -574,6 +581,9 @@ def acs_compile(builder, part):
                 # rmtree(tmp_dir) # Refresh the acs again!
                 utils.process_msg(builder, "Retrying ACS Compilation.".format(file))
                 outs = ACSCOMP_RUNNING
+            elif builder.ui.response == 2: # Continue
+                utils.process_msg(builder, "Resuming ACS Compilation.".format(file))
+                outs = ACSCOMP_RUNNING
             else: continue
             
         if(outs == ACSCOMP_FALLBACK):
@@ -594,4 +604,4 @@ def acs_compile(builder, part):
 def ACSComp_SendError(builder, msg):
     wx.PostEvent(builder.ui, br.StatusBarEvent(msg))
     # builder.ui.ACSErrorOutput(error)
-    wx.CallAfter(builder.ui.ACSErrorOutput, msg + "\n\nDo you wish to RETRY or ABORT the ACS Compilation?")
+    wx.CallAfter(builder.ui.ACSErrorOutput, msg + "\n\nDo you wish to RESUME, RETRY or ABORT the ACS Compilation?")

@@ -231,8 +231,14 @@ class ConfigDialog(wx.Dialog):
             f.close()
 
             project_json[const.JSON_PROJPARTS] = p
+            count_part = 0
             for k in p.keys():
-                project_json[const.JSON_PROJPARTS][k][const.JSON_PROJPARTS_SKIPPED] = False
+                # Recover old skip part flag values if they were already checked before.
+                if count_part in range(0, min(len(self.frame.skip_parts), len(skip_part_oldvalues))):
+                    project_json[const.JSON_PROJPARTS][k][const.JSON_PROJPARTS_SKIPPED] = True
+                else:
+                    project_json[const.JSON_PROJPARTS][k][const.JSON_PROJPARTS_SKIPPED] = False
+                count_part = count_part + 1
 
             for k in s.keys():
                 project_json[const.JSON_BUILDSETS][k] = s[k]

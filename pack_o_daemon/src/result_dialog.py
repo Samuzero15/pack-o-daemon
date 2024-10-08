@@ -138,33 +138,47 @@ class ACSErrorDialog(wx.Dialog):
         btns = wx.BoxSizer(wx.HORIZONTAL)
         
         panel = wx.Panel(self);
-        txt = wx.TextCtrl(panel, value=results, style=wx.TE_MULTILINE | wx.TE_READONLY)
+        self.txt = wx.TextCtrl(panel, value=results, style=wx.TE_MULTILINE | wx.TE_READONLY)
         font = wx.Font(8, wx.MODERN, wx.NORMAL, wx.NORMAL, False, u'Consolas')
-        txt.SetFont(font)
+        self.txt.SetFont(font)
         btn1 = wx.Button(panel, label="Retry")
         btn2 = wx.Button(panel, label="Abort")
+        btn3 = wx.Button(panel, label="Resume")
+        
         
         self.Bind(wx.EVT_BUTTON, self.OnRetry, btn1)
         self.Bind(wx.EVT_BUTTON, self.OnAbort, btn2)
+        self.Bind(wx.EVT_BUTTON, self.OnResume, btn3)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         
+        btns.Add(btn3, 0, wx.CENTER | wx.ALL, 2)
         btns.Add(btn1, 0, wx.CENTER | wx.ALL, 2)
         btns.Add(btn2, 0, wx.CENTER | wx.ALL, 2)
         
-        cont.Add(txt, 1, wx.ALL | wx.EXPAND | wx.CENTER, 5)
+        cont.Add(self.txt, 1, wx.ALL | wx.EXPAND | wx.CENTER, 5)
         cont.Add(btns, 0, wx.CENTER | wx.ALL, 5)
         panel.SetSizerAndFit(cont)
+
+    def SetOutput(self, output):
+        self.txt.SetValue(output)
+        self.Centre()
+    
+    def OnResume(self, event):
+        self.parent.response = 2
+        self.Close()
     
     def OnRetry(self, event):
         self.parent.response = 1
-        self.Close();
+        self.Close()
     
     def OnAbort(self, event):
         self.parent.response = 0
-        self.Close();
+        self.Close()
     
     def OnClose(self, event):
         if(self.parent.response == -1): self.parent.response = 0
-        self.Destroy()
+        self.parent.Show()
+        self.parent.Raise()
+        self.Hide()
     
     

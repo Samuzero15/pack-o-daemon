@@ -15,7 +15,7 @@ from random import randint
 
 PROJECT_FILE = "project.json"
 
-VERSION = (1, 7, 1)
+VERSION = (1, 7, 2)
 EXENAME = "Pack-o-daemon"
 
 BFLAG_SKIPACSCOMP = 0

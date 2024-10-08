@@ -146,6 +146,7 @@ class Main(wx.Frame):
         self.btn_log = wx.Button(self.panel,label="No Log")
         self.notebook = wx.Notebook(self.panel,size=(100, 300), style=wx.NB_BOTTOM)
 
+        self.acs_err_dialog = rd.ACSErrorDialog(self, "")
         self.btn_log.Disable()
         
         panelSizer = wx.BoxSizer(wx.VERTICAL)
@@ -601,12 +602,14 @@ class Main(wx.Frame):
             rd.ResultDialog(self, header, event.data, filename).ShowModal()
 
     def ACSErrorOutput(self, output):
-        if self.acs_err_dialog is None:
+            self.acs_err_dialog.SetOutput(output)
             self.response = -1
-            self.acs_err_dialog = rd.ACSErrorDialog(self, output)
+            self.acs_err_dialog.Show()
+            self.acs_err_dialog.Raise()
             self.acs_err_dialog.ShowModal()
+            
             # self.acs_err_dialog.Destroy()
-            self.acs_err_dialog = None
+            # self.acs_err_dialog = None
         # acs_err_dialog.Destroy()
     
     
